@@ -113,4 +113,4 @@ class Block:
 
         # Checking if each transaction is valid
         for t in self.transactions:
-            t.validate()
+            t.validate(chain)
