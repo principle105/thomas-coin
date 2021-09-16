@@ -3,18 +3,26 @@ import time
 from config import DEFAULT_FEE, LOWEST_FEE
 from hashlib import sha256
 from ecdsa.curves import SECP256k1
-from blockchain.blockchain import Blockchain
+from base64 import b64encode
 
 
 class Transaction:
-    def __init__(self, sender, receiver, amount, tip, timestamp=None, signature=None):
+    def __init__(
+        self,
+        sender: str,
+        receiver: str,
+        amount: int,
+        tip: int,
+        timestamp: str = None,
+        signature: str = None,
+    ):
         """
         sender: sender public key
         receiver: receiver public address
         """
 
         if timestamp is None:
-            self.timestamp = int(time.time())
+            self.timestamp = str(time.time())
 
         self.sender = sender
         self.receiver = receiver
@@ -28,7 +36,7 @@ class Transaction:
             "sender": self.sender,
             "receiver": self.receiver,
             "amount": self.amount,
-            "signature": self.signature,
+            "signature": b64encode(self.signature).decode(),
             "time": self.timestamp,
             "hash": self.hash(),
         }
@@ -42,7 +50,7 @@ class Transaction:
         return sha256(data).hexdigest()
 
     def sign(self, private_key: ecdsa.SigningKey):
-        return private_key.sign(self.hash().encode())
+        self.signature = str(private_key.sign(self.hash().encode()))
 
     def is_signature_valid(self):
         sender_key = self.sender_public_key
@@ -58,7 +66,7 @@ class Transaction:
         key_string = bytes.fromhex(self.sender)
         return ecdsa.VerifyingKey.from_string(key_string, curve=SECP256k1)
 
-    def validate(self, chain: Blockchain):
+    def validate(self, chain):
         # Checking if the sender key is valid
         try:
             _ = self.sender_public_key
@@ -69,9 +77,14 @@ class Transaction:
 
         # Checking if the sender has enough coins to create the transaction
 
-
         # WORKING ON THIS
 
-
-        
-
+    def from_json(cls, sender, receiver, amount, tip, timestamp, signature):
+        return cls(
+            sender=sender,
+            receiver=receiver,
+            amount=int(amount),
+            tip=int(tip),
+            timestamp=timestamp,
+            signature=signature,
+        )

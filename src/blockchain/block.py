@@ -3,28 +3,27 @@ import json
 import ecdsa
 from ecdsa.curves import SECP256k1
 from transaction import Transaction
-from .blockchain import Blockchain
 from config import GENESIS_PUBLIC_KEY
 from hashlib import sha256
-from base64 import b64decode, b64encode
+from base64 import b64encode
 
 
 class Block:
     def __init__(
         self,
-        index,
-        prev,
-        forger=None,
-        timestamp=None,
+        index: str,
+        prev: str,
+        forger: str = None,
+        timestamp: str = None,
         transactions: list[Transaction] = [],
-        signature=None,
+        signature: str = None,
     ):
         if timestamp is None:
-            timestamp = time.time()
+            timestamp = str(time.time())
 
         self.index = index
         self.prev = prev
-        # Public key of the block forger
+        # Public key of block forger
         self.forger = forger
         self.timestamp = timestamp
         self.transactions = transactions
@@ -42,7 +41,9 @@ class Block:
 
     def get_transactions_as_json(self):
         return (
-            sorted([t.get_json() for t in self.transactions], key=lambda t: t["nonce"]),
+            sorted(
+                [t.get_json() for t in self.transactions], key=lambda t: t["amount"]
+            ),
         )
 
     def hash(self):
@@ -87,22 +88,25 @@ class Block:
         self.signature = self.sign(forger_private_key)
 
     def sign(self, forger_private_key: ecdsa.SigningKey):
-        return forger_private_key.sign(self.hash().encode())
+        self.signature = str(forger_private_key.sign(self.hash().encode()))
 
-    def validate(self, chain: Blockchain):
+    def validate(self, chain):
         chain_length = len(chain)
         # Checking if the block is the genesis block
-        if self.index == chain_length-1 == 0:
+        if self.index == chain_length - 1 == 0:
             # Checking if the genesis block is valid
-            if self.forger != GENESIS_PUBLIC_KEY or self.is_signature_verified() is False:
+            if (
+                self.forger != GENESIS_PUBLIC_KEY
+                or self.is_signature_verified() is False
+            ):
                 raise Exception("Genesis block not valid")
-            
+
             return
 
         # Checking if the block comes after the last block in the chain
         if self.index != chain_length:
             raise Exception("Incorrect block index")
-        
+
         # Checking the previous hash
         if self.prev != chain.blocks[-1]:
             raise Exception("Previous hash does not match")
@@ -114,3 +118,14 @@ class Block:
         # Checking if each transaction is valid
         for t in self.transactions:
             t.validate(chain)
+
+    def from_json(cls, index, prev, forger, timestamp, transactions: list, signature):
+        transactions = list(map(lambda t: Transaction.from_json(**t), transactions))
+        return cls(
+            index=index,
+            prev=prev,
+            forger=forger,
+            timestamp=timestamp,
+            transactions=transactions,
+            signature=signature,
+        )
