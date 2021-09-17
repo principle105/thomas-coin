@@ -7,6 +7,7 @@ from config import GENESIS_PUBLIC_KEY
 from hashlib import sha256
 from base64 import b64encode
 
+
 class Block:
     def __init__(
         self,

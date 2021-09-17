@@ -48,7 +48,7 @@ class Transaction:
             "amount": self.amount,
             "tip": 0,
             "signature": b64encode(self.signature).decode(),
-            "time": self.timestamp,
+            "timestamp": self.timestamp,
             "hash": self.hash,
         }
         return data
