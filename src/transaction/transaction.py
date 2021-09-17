@@ -15,10 +15,15 @@ class Transaction:
         tip: int,
         timestamp: str = None,
         signature: str = None,
+        hash: str = None,
     ):
         """
         sender: sender public key
         receiver: receiver public address
+        amount: coins being sent
+        tip: transaction tip
+        timestamp: timestamp of transaction (seconds since the epoch)
+        signature: proves that sender approved the transaction
         """
 
         if timestamp is None:
@@ -27,37 +32,41 @@ class Transaction:
         self.sender = sender
         self.receiver = receiver
         self.amount = amount
-        self.signature = signature
         # Higher tip gives priority
         self.tip = tip
+        self.signature = signature
+
+        if hash is None:
+            hash = self.get_hash()
+
+        self.hash = hash
 
     def get_json(self):
         data = {
             "sender": self.sender,
             "receiver": self.receiver,
             "amount": self.amount,
+            "tip": 0,
             "signature": b64encode(self.signature).decode(),
             "time": self.timestamp,
-            "hash": self.hash(),
+            "hash": self.hash,
         }
         return data
 
     def get_raw_transaction_string(self):
         return f"{self.sender}{self.receiver}{self.amount}{self.timestamp}"
 
-    def hash(self):
+    def get_hash(self) -> str:
         data = self.get_raw_transaction_string().encode()
         return sha256(data).hexdigest()
 
     def sign(self, private_key: ecdsa.SigningKey):
-        self.signature = str(private_key.sign(self.hash().encode()))
+        self.signature = private_key.sign(self.hash.encode())
 
     def is_signature_valid(self):
         sender_key = self.sender_public_key
         try:
-            return sender_key.verify(
-                signature=self.signature, data=self.hash().encode()
-            )
+            return sender_key.verify(signature=self.signature, data=self.hash.encode())
         except ecdsa.BadSignatureError:
             return False
 
@@ -79,7 +88,8 @@ class Transaction:
 
         # WORKING ON THIS
 
-    def from_json(cls, sender, receiver, amount, tip, timestamp, signature):
+    @classmethod
+    def from_json(cls, sender, receiver, amount, tip, timestamp, signature, hash):
         return cls(
             sender=sender,
             receiver=receiver,
@@ -87,4 +97,5 @@ class Transaction:
             tip=int(tip),
             timestamp=timestamp,
             signature=signature,
+            hash=hash,
         )

@@ -7,7 +7,6 @@ from config import GENESIS_PUBLIC_KEY
 from hashlib import sha256
 from base64 import b64encode
 
-
 class Block:
     def __init__(
         self,
@@ -17,6 +16,7 @@ class Block:
         timestamp: str = None,
         transactions: list[Transaction] = [],
         signature: str = None,
+        hash: str = None,
     ):
         if timestamp is None:
             timestamp = str(time.time())
@@ -29,6 +29,11 @@ class Block:
         self.transactions = transactions
         self.signature = signature
 
+        if hash is None:
+            hash = self.get_hash()
+
+        self.hash = hash
+
     def get_raw_data(self):
         data = {
             "index": self.index,
@@ -40,13 +45,12 @@ class Block:
         return data
 
     def get_transactions_as_json(self):
-        return (
-            sorted(
-                [t.get_json() for t in self.transactions], key=lambda t: t["amount"]
-            ),
+        data = sorted(
+            [t.get_json() for t in self.transactions], key=lambda t: t["amount"]
         )
+        return data
 
-    def hash(self):
+    def get_hash(self) -> None:
         data = self.get_raw_data()
         block_string = json.dumps(data, sort_keys=True).encode()
         return sha256(block_string).hexdigest()
@@ -55,7 +59,7 @@ class Block:
         data = self.get_raw_data()
         return {
             **data,
-            "hash": self.hash(),
+            "hash": self.hash,
             "signature": b64encode(self.signature).decode(),
         }
 
@@ -70,9 +74,7 @@ class Block:
     def is_signature_verified(self) -> bool:
         """Checks if the block signature is valid"""
         try:
-            return self.forger_verifying_key.verify(
-                self.signature, self.hash().encode()
-            )
+            return self.forger_verifying_key.verify(self.signature, self.hash.encode())
         except ecdsa.BadSignatureError:
             return False
 
@@ -88,7 +90,7 @@ class Block:
         self.signature = self.sign(forger_private_key)
 
     def sign(self, forger_private_key: ecdsa.SigningKey):
-        self.signature = str(forger_private_key.sign(self.hash().encode()))
+        self.signature = forger_private_key.sign(self.hash.encode())
 
     def validate(self, chain):
         chain_length = len(chain)
@@ -119,7 +121,10 @@ class Block:
         for t in self.transactions:
             t.validate(chain)
 
-    def from_json(cls, index, prev, forger, timestamp, transactions: list, signature):
+    @classmethod
+    def from_json(
+        cls, index, prev, forger, timestamp, transactions: list, signature, hash
+    ):
         transactions = list(map(lambda t: Transaction.from_json(**t), transactions))
         return cls(
             index=index,
@@ -128,4 +133,5 @@ class Block:
             timestamp=timestamp,
             transactions=transactions,
             signature=signature,
+            hash=hash,
         )
