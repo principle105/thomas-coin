@@ -13,7 +13,7 @@ class Transaction:
         receiver: str,
         amount: int,
         tip: int,
-        timestamp: str = None,
+        timestamp: float = None,
         signature: str = None,
         hash: str = None,
         sender: str = None,
@@ -28,7 +28,7 @@ class Transaction:
         """
 
         if timestamp is None:
-            timestamp = str(time.time())
+            timestamp = time.time()
 
         self.timestamp = timestamp
 

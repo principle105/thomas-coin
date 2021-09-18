@@ -3,7 +3,8 @@ import json
 import ecdsa
 from ecdsa.curves import SECP256k1
 from transaction import Transaction
-from config import GENESIS_PUBLIC_KEY
+from wallet import Wallet
+from constants import GENESIS_BLOCK_DATA
 from hashlib import sha256
 from base64 import b64encode, b64decode
 
@@ -11,16 +12,16 @@ from base64 import b64encode, b64decode
 class Block:
     def __init__(
         self,
-        index: str,
+        index: int,
         prev: str,
         forger: str = None,
-        timestamp: str = None,
+        timestamp: float = None,
         transactions: list[Transaction] = [],
         signature: str = None,
         hash: str = None,
     ):
         if timestamp is None:
-            timestamp = str(time.time())
+            timestamp = time.time()
 
         self.index = index
         self.prev = prev
@@ -81,20 +82,24 @@ class Block:
         except ecdsa.BadSignatureError:
             return False
 
-    def sign(self, forger_private_key: ecdsa.SigningKey):
-        print(type(forger_private_key.sign(self.hash.encode())))
-        self.signature = b64encode(forger_private_key.sign(self.hash.encode())).decode()
+    def sign(self, forger: Wallet):
+        self.forger = forger.public_key
+        self.signature = b64encode(forger.sk.sign(self.hash.encode())).decode()
 
-    def validate(self, chain):
+    def validate(self, chain: list):
+        """
+        chain: list of blockchain blocks (Blockchain.chain)
+        """
+
         chain_length = len(chain)
+        if chain_length == 0:
+            raise Exception("Chain is empty")
+
         # Checking if the block is the genesis block
         if self.index == chain_length - 1 == 0:
             # Checking if the genesis block is valid
-            if (
-                self.forger != GENESIS_PUBLIC_KEY
-                or self.is_signature_verified() is False
-            ):
-                raise Exception("Genesis block not valid")
+            if self.get_json() != GENESIS_BLOCK_DATA:
+                raise Exception("Genesis block is not valid")
 
             return
 
@@ -103,7 +108,7 @@ class Block:
             raise Exception("Incorrect block index")
 
         # Checking the previous hash
-        if self.prev != chain.blocks[-1]:
+        if self.prev != chain[-1].hash:
             raise Exception("Previous hash does not match")
 
         # Checking if signature is verified
