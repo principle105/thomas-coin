@@ -7,6 +7,7 @@ from wallet import Wallet
 from constants import GENESIS_BLOCK_DATA
 from hashlib import sha256
 from base64 import b64encode, b64decode
+from blockchain import Blockchain
 
 
 class Block:
@@ -86,12 +87,19 @@ class Block:
         self.forger = forger.public_key
         self.signature = b64encode(forger.sk.sign(self.hash.encode())).decode()
 
-    def validate(self, chain: list):
+    def validate(self, chain: Blockchain):
         """
-        chain: list of blockchain blocks (Blockchain.chain)
+        chain: blockchain object
         """
 
-        chain_length = len(chain)
+        # Checking if the block has a signature
+        if self.signature is None:
+            raise Exception("The block is not signed")
+
+        if self.forger is None:
+            raise Exception("Block does not have a forger")
+
+        chain_length = len(chain.chain)
         if chain_length == 0:
             raise Exception("Chain is empty")
 
@@ -108,14 +116,14 @@ class Block:
             raise Exception("Incorrect block index")
 
         # Checking the previous hash
-        if self.prev != chain[-1].hash:
+        if self.prev != chain.chain[-1].hash:
             raise Exception("Previous hash does not match")
 
         # Checking if signature is verified
         if self.is_signature_verified() is False:
             raise Exception("Invalid block signature")
 
-        # Checking if each transaction is valid
+        # Validating each traqnsaction
         for t in self.transactions:
             t.validate(chain)
 

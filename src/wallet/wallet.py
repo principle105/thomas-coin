@@ -20,7 +20,7 @@ class Wallet:
 
         self.private_key = self.sk.to_string().hex()
 
-        self.public_address = self.convert_to_address(self.public_key)
+        self.address = self.convert_to_address(self.public_key)
 
     # https://ethereum.stackexchange.com/questions/3542/how-are-ethereum-addresses-generated
     def convert_to_address(self, public_key: str):
@@ -30,7 +30,3 @@ class Wallet:
                 sha256(public_key.encode("utf-8")).hexdigest().encode("utf-8")
             ).hexdigest()[-40:]
         )
-
-    @property
-    def address(self) -> str:
-        return self.public_address

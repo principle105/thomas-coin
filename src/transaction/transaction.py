@@ -1,9 +1,9 @@
 import ecdsa
 import time
-from config import DEFAULT_FEE, LOWEST_FEE
 from hashlib import sha256
 from ecdsa.curves import SECP256k1
 from base64 import b64encode, b64decode
+from blockchain import Blockchain
 
 
 class Transaction:
@@ -99,18 +99,24 @@ class Transaction:
         except ecdsa.BadSignatureError:
             return False
 
-    def validate(self, chain):
+    def validate(self, chain: Blockchain):
+        
         # Checking if the sender key is valid
         try:
             _ = self.sender_public_key
         except ecdsa.MalformedPointError:
             raise Exception("Sender public key is invalid")
 
-        fee = max((self.amount * DEFAULT_FEE), LOWEST_FEE)
+        # Checking if the signature is valid
+        if self.is_signature_valid() is False:
+            raise Exception("Invalid signature")
+
+        # TODO: work on fees
 
         # Checking if the sender has enough coins to create the transaction
-
-        # WORKING ON THIS
+        balance = chain.get_balance(self.sender)
+        if balance < self.amount:
+            raise Exception("Wallet does not have enough coins for transaction")
 
     @classmethod
     def from_json(

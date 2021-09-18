@@ -9,12 +9,8 @@ class Blockchain:
         self.add_genesis_block()
 
     def add_block(self, block: Block):
-        # Checking if the block has a signature
-        if block.signature is None:
-            raise Exception("The block is not signed")
-
         # Checking if the block is valid
-        block.validate(self.chain)
+        block.validate(self)
 
         self.chain.append(block)
 
