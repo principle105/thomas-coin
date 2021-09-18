@@ -3,7 +3,7 @@ import time
 from config import DEFAULT_FEE, LOWEST_FEE
 from hashlib import sha256
 from ecdsa.curves import SECP256k1
-from base64 import b64encode
+from base64 import b64encode, b64decode
 
 
 class Transaction:
@@ -47,7 +47,7 @@ class Transaction:
             "receiver": self.receiver,
             "amount": self.amount,
             "tip": 0,
-            "signature": b64encode(self.signature).decode(),
+            "signature": self.signature,
             "timestamp": self.timestamp,
             "hash": self.hash,
         }
@@ -61,12 +61,14 @@ class Transaction:
         return sha256(data).hexdigest()
 
     def sign(self, private_key: ecdsa.SigningKey):
-        self.signature = private_key.sign(self.hash.encode())
+        self.signature = b64encode(private_key.sign(self.hash.encode())).decode()
 
     def is_signature_valid(self):
         sender_key = self.sender_public_key
         try:
-            return sender_key.verify(signature=self.signature, data=self.hash.encode())
+            return sender_key.verify(
+                signature=b64decode(self.signature.encode()), data=self.hash.encode()
+            )
         except ecdsa.BadSignatureError:
             return False
 

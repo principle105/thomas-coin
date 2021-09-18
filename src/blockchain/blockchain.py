@@ -44,6 +44,14 @@ class Blockchain:
         self.chain.append(block)
 
     def verify(self, address, public_key):
+        print(
+            "T"
+            + sha256(
+                sha256(public_key.encode("utf-8")).hexdigest().encode("utf-8")
+            ).hexdigest()[-40:]
+        )
+        print("\n")
+        print(address)
         return (
             "T"
             + sha256(
@@ -56,8 +64,7 @@ class Blockchain:
         bal = 0
         for block in self.chain:
             for t in block.transactions:
-                print(t.sender, address)
-                if self.verify(t.sender, address):
+                if self.verify(address, t.sender):
                     bal -= t.amount
                 if t.receiver == address:
                     bal += t.amount

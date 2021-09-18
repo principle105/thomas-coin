@@ -5,7 +5,7 @@ from ecdsa.curves import SECP256k1
 from transaction import Transaction
 from config import GENESIS_PUBLIC_KEY
 from hashlib import sha256
-from base64 import b64encode
+from base64 import b64encode, b64decode
 
 
 class Block:
@@ -47,7 +47,7 @@ class Block:
 
     def get_transactions_as_json(self):
         data = sorted(
-            [t.get_json() for t in self.transactions], key=lambda t: t["amount"]
+            [t.get_json() for t in self.transactions], key=lambda t: t["timestamp"]
         )
         return data
 
@@ -61,7 +61,7 @@ class Block:
         return {
             **data,
             "hash": self.hash,
-            "signature": b64encode(self.signature).decode(),
+            "signature": self.signature,
         }
 
     def append_transaction(self, transaction: Transaction):
@@ -75,23 +75,14 @@ class Block:
     def is_signature_verified(self) -> bool:
         """Checks if the block signature is valid"""
         try:
-            return self.forger_verifying_key.verify(self.signature, self.hash.encode())
+            return self.forger_verifying_key.verify(
+                b64decode(self.signature.encode()), self.hash.encode()
+            )
         except ecdsa.BadSignatureError:
             return False
 
-    def create_signature(self, forger_private_address: str):
-
-        forger_private_key_string = bytes.fromhex(forger_private_address)
-        forger_private_key = ecdsa.SigningKey.from_string(
-            forger_private_key_string, curve=SECP256k1
-        )
-
-        if forger_private_key.get_verifying_key() != self.forger_public_key:
-            raise Exception("Keys do not match")
-        self.signature = self.sign(forger_private_key)
-
     def sign(self, forger_private_key: ecdsa.SigningKey):
-        self.signature = forger_private_key.sign(self.hash.encode())
+        self.signature = b64encode(forger_private_key.sign(self.hash.encode())).decode()
 
     def validate(self, chain):
         chain_length = len(chain)
