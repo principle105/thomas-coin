@@ -82,6 +82,7 @@ class Block:
             return False
 
     def sign(self, forger_private_key: ecdsa.SigningKey):
+        print(type(forger_private_key.sign(self.hash.encode())))
         self.signature = b64encode(forger_private_key.sign(self.hash.encode())).decode()
 
     def validate(self, chain):

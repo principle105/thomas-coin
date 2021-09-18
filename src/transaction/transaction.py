@@ -9,16 +9,17 @@ from base64 import b64encode, b64decode
 class Transaction:
     def __init__(
         self,
-        sender: str,
+        sender_key: str,
         receiver: str,
         amount: int,
         tip: int,
         timestamp: str = None,
         signature: str = None,
         hash: str = None,
+        sender: str = None,
     ):
         """
-        sender: sender public key
+        sender_key: sender public key
         receiver: receiver public address
         amount: coins being sent
         tip: transaction tip
@@ -27,13 +28,24 @@ class Transaction:
         """
 
         if timestamp is None:
-            self.timestamp = str(time.time())
+            timestamp = str(time.time())
+
+        self.timestamp = timestamp
+
+        if sender is None:
+            sender = self.convert_to_address(sender_key)
 
         self.sender = sender
+
+        self.sender_key = sender_key
+
         self.receiver = receiver
+
         self.amount = amount
+
         # Higher tip gives priority
         self.tip = tip
+
         self.signature = signature
 
         if hash is None:
@@ -41,9 +53,24 @@ class Transaction:
 
         self.hash = hash
 
+    # https://ethereum.stackexchange.com/questions/3542/how-are-ethereum-addresses-generated
+    def convert_to_address(self, public_key: str):
+        return (
+            "T"
+            + sha256(
+                sha256(public_key.encode("utf-8")).hexdigest().encode("utf-8")
+            ).hexdigest()[-40:]
+        )
+
+    @property
+    def sender_public_key(self):
+        key_string = bytes.fromhex(self.sender_key)
+        return ecdsa.VerifyingKey.from_string(key_string, curve=SECP256k1)
+
     def get_json(self):
         data = {
             "sender": self.sender,
+            "sender_key": self.sender_key,
             "receiver": self.receiver,
             "amount": self.amount,
             "tip": 0,
@@ -72,11 +99,6 @@ class Transaction:
         except ecdsa.BadSignatureError:
             return False
 
-    @property
-    def sender_public_key(self):
-        key_string = bytes.fromhex(self.sender)
-        return ecdsa.VerifyingKey.from_string(key_string, curve=SECP256k1)
-
     def validate(self, chain):
         # Checking if the sender key is valid
         try:
@@ -91,9 +113,12 @@ class Transaction:
         # WORKING ON THIS
 
     @classmethod
-    def from_json(cls, sender, receiver, amount, tip, timestamp, signature, hash):
+    def from_json(
+        cls, sender, sender_key, receiver, amount, tip, timestamp, signature, hash
+    ):
         return cls(
             sender=sender,
+            sender_key=sender_key,
             receiver=receiver,
             amount=int(amount),
             tip=int(tip),

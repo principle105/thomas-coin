@@ -1,39 +1,32 @@
 from .block import Block
-from hashlib import sha256
 
 GENESIS_BLOCK_DATA = {
     "index": "0",
     "prev": "0",
-    "forger": "T977e7b212b29a2b0fcc30d2c2db83c71ad1161c6 ",
-    "timestamp": "1631749808.558269",
+    "forger": "0",
+    "timestamp": "1631997358.256316",
     "transactions": [
         {
-            "sender": "971a12a0d1c9068167226ff46eca48b2db547206e2adef193db7596cb30578a1fef2907db56dfb534efafd98776b77f13f74beee7c2b1f4d943f20cda6d31aff",
-            "receiver": "T977e7b212b29a2b0fcc30d2c2db83c71ad1161c6",
-            "amount": 1000,
+            "sender": "GENESIS",
+            "sender_key": "GENESIS",
+            "receiver": "T6a0459220225c6b4bfaef26ec87844a072afc29a",
+            "amount": 10000,
             "tip": 0,
-            "signature": "Stkd9WsC5+6fvZcR2clRPnysZJPD6Tam9LT5r4wybnbRS6QCB0/ExixORXWAwmgzyOOv364U08QE4YNcjHm9PQ==",
-            "timestamp": "1631890525.674031",
-            "hash": "7e1e4b2a9cf92501514dc4afd207917489912bf77122f931f7b19b8716465863",
+            "signature": "GENESIS",
+            "timestamp": "1631997358.255879",
+            "hash": "ba2a98efcc88fbd454aead1cefb96405c7827d2b0b55a721f3025749aaf1c6b1",
         }
     ],
-    "hash": "0fb4e9f2faada279c7c641eaeb8ffa52e8e3d75ae50f75b284e5d21c1acfd321",
-    "signature": "RTWyryY82uhADCP0L3jFu8j8XibyOaqDN/DHWvRthh73zpaD270CnM+IhSSQUjZakpp7iwQn+it/GUkA5zUglw==",
+    "hash": "6cdfe9138c37e7f9826f0031b2ef25dd33d2e7381e43380c4e6f5f4404fcfe7c",
+    "signature": "0",
 }
-
 
 class Blockchain:
     def __init__(self, chain: list[Block] = [], pruned: bool = False):
         self.chain = chain
         self.pruned = pruned
 
-    def create_new_block(self, forger: str):
-        """
-        forger: public key of the block forger
-        """
-
     def add_block(self, block: Block):
-
         # Checking if the block has a signature
         if block.signature is None:
             raise Exception("The block is not signed")
@@ -43,30 +36,13 @@ class Blockchain:
 
         self.chain.append(block)
 
-    def verify(self, address, public_key):
-        print(
-            "T"
-            + sha256(
-                sha256(public_key.encode("utf-8")).hexdigest().encode("utf-8")
-            ).hexdigest()[-40:]
-        )
-        print("\n")
-        print(address)
-        return (
-            "T"
-            + sha256(
-                sha256(public_key.encode("utf-8")).hexdigest().encode("utf-8")
-            ).hexdigest()[-40:]
-            == address
-        )
-
     def get_balance(self, address: str):
         bal = 0
         for block in self.chain:
             for t in block.transactions:
-                if self.verify(address, t.sender):
+                if t.sender == address:
                     bal -= t.amount
-                if t.receiver == address:
+                elif t.receiver == address:
                     bal += t.amount
         return bal
 
