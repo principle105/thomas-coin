@@ -104,7 +104,7 @@ class Block:
         if self.forger is None:
             raise Exception("Block does not have a forger")
 
-        chain_length = len(chain.chain)
+        chain_length = len(chain.blocks)
         if chain_length == 0:
             raise Exception("Chain is empty")
 
@@ -118,10 +118,10 @@ class Block:
 
         # Checking if the block comes after the last block in the chain
         if self.index != chain_length:
-            raise Exception("Incorrect block index")
+            raise Exception(f"Incorrect block index {self.index} {chain_length}")
 
         # Checking the previous hash
-        if self.prev != chain.chain[-1].hash:
+        if self.prev != chain.blocks[-1].hash:
             raise Exception("Previous hash does not match")
 
         # Checking if signature is verified

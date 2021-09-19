@@ -105,7 +105,7 @@ class Transaction:
             return False
 
     def validate(self, chain: "Blockchain"):
-        
+
         # Checking if the sender key is valid
         try:
             _ = self.sender_public_key

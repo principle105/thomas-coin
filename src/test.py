@@ -1,8 +1,3 @@
-from blockchain import Blockchain, Block
-from wallet import Wallet
-from transaction import Transaction
-from os import getenv
-
 try:
     from dotenv import load_dotenv
 
@@ -10,31 +5,43 @@ try:
 except ImportError:
     pass
 
-def send(blockchain: Blockchain, wallet: Wallet, receiver: str, amount: int) -> Block:
-    chain = blockchain.chain
-
-    block = Block(len(chain), chain[-1].hash)
-
-    t = Transaction(wallet.public_key, receiver, amount, 10)
-
-    t.sign(wallet)
-
-    block.append_transaction(t)
-
-    block.sign(wallet)
-
-    return block
+from blockchain import Blockchain, Block
+from wallet import Wallet
+from transaction import Transaction
+from os import getenv
+import time
 
 if __name__ == "__main__":
-    owner = Wallet(getenv("OWNER_PRIVATE_KEY"))
+    # owner = Wallet(getenv("OWNER_PRIVATE_KEY"))
 
-    other = Wallet("1ef98e260c70ae196079655392461226c42778b8373ba9780e497272e47d53dc")
+    # other = Wallet("1ef98e260c70ae196079655392461226c42778b8373ba9780e497272e47d53dc")
 
-    chain = Blockchain()
+    # chain = Blockchain()
 
-    block = send(chain, owner, other.address, 100)
+    # for _ in range(200):
+    #     # sending coins
+    #     b = Block(len(chain.blocks), chain.blocks[-1].hash)
+    #     if len(chain.blocks) == 1:
 
-    chain.add_block(block)
+    #         t = Transaction(owner.public_key, other.address, 1, 0)
 
-    print("OWNER",chain.get_balance(owner.address))
-    print("OTHER",chain.get_balance(other.address))
+    #         t.sign(owner)
+
+    #         b.append_transaction(t)
+
+    #     b.sign(owner)
+
+    #     chain.add_block(b)
+
+    # print("OWNER", chain.get_balance(owner.address))
+    # print("OTHER", chain.get_balance(other.address))
+
+    # a = time.time()
+    # chain.save_locally()
+
+    # print("TO SAVE",time.time() - a)
+    a = time.time()
+
+    newchain = Blockchain.from_local(False)
+
+    print("TO RELOAD", time.time() - a)

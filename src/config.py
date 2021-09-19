@@ -1,1 +1,1 @@
-BLOCK_PATH = "database/blocks/"
+BLOCK_PATH = "database/blocks.thom"
