@@ -7,7 +7,11 @@ from wallet import Wallet
 from constants import GENESIS_BLOCK_DATA
 from hashlib import sha256
 from base64 import b64encode, b64decode
-from blockchain import Blockchain
+from typing import TYPE_CHECKING
+
+# To avoid circular imports
+if TYPE_CHECKING:
+    from blockchain import Blockchain
 
 
 class Block:
@@ -87,7 +91,7 @@ class Block:
         self.forger = forger.public_key
         self.signature = b64encode(forger.sk.sign(self.hash.encode())).decode()
 
-    def validate(self, chain: Blockchain):
+    def validate(self, chain: "Blockchain"):
         """
         chain: blockchain object
         """
@@ -96,6 +100,7 @@ class Block:
         if self.signature is None:
             raise Exception("The block is not signed")
 
+        # Checking if the block has a forger
         if self.forger is None:
             raise Exception("Block does not have a forger")
 

@@ -17,6 +17,8 @@ def send(blockchain: Blockchain, wallet: Wallet, receiver: str, amount: int) -> 
 
     t = Transaction(wallet.public_key, receiver, amount, 10)
 
+    t.sign(wallet)
+
     block.append_transaction(t)
 
     block.sign(wallet)

@@ -1,7 +1,6 @@
 import json
 from config import BLOCK_PATH
 
-
 def get_block_data(block_index: int):
     with open(f"{BLOCK_PATH}/{block_index}.json", "r") as f:
         data = json.load(f)

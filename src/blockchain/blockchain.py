@@ -1,5 +1,6 @@
 from .block import Block
 from constants import GENESIS_BLOCK_DATA
+from database import get_block_data
 
 class Blockchain:
     def __init__(self, chain: list[Block] = [], pruned: bool = False):
