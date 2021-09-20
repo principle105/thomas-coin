@@ -5,7 +5,6 @@ import socket
 import time
 from .node_connection import Node_Connection
 
-
 # Based on https://github.com/macsnoeren/python-p2p-network
 class Node(threading.Thread):
     def __init__(self, host, port, callback=None):
@@ -35,14 +34,6 @@ class Node(threading.Thread):
         self.message_count_rerr = 0
 
     def init_server(self):
-        print("Initializing node ")
-        print(
-            "Node System: Initialisation of the Node on port: "
-            + str(self.port)
-            + " on node ("
-            + self.id
-            + ")"
-        )
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self.host, self.port))
         self.sock.settimeout(10.0)
@@ -74,23 +65,18 @@ class Node(threading.Thread):
     def send_data_to_nodes(self, data, exclude=[]):
 
         self.message_count_send = self.message_count_send + 1
+
         for n in self.nodes_inbound:
-            if n in exclude:
-                print(
-                    "Node System: Node send_data_to_nodes: Excluding node in sending the message"
-                )
-            else:
+
+            if n not in exclude:
                 try:
                     self.send_data_to_node(n, data)
                 except:  # lgtm [py/catch-base-exception]
                     pass
 
         for n in self.nodes_outbound:
-            if n in exclude:
-                print(
-                    "Node System: Node send_data_to_nodes: Excluding node in sending the message"
-                )
-            else:
+
+            if n not in exclude:
                 try:
                     self.send_data_to_node(n, data)
                 except:  # lgtm [py/catch-base-exception]
@@ -104,32 +90,26 @@ class Node(threading.Thread):
             try:
                 n.send(data)
 
-            except Exception as e:
-                print(
-                    "Node System: Node send_data_to_node: Error while sending data to the node ("
-                    + str(e)
-                    + ")"
-                )
+            except:
+                print("Error while sending data")
         else:
-            print(
-                "Node System: Node send_data_to_node: Could not send the data, node is not found!"
-            )
+            print("Node not found")
 
     def connect_to_node(self, host, port):
-
+        
+        # Making sure you can't connect with yourself
         if host == self.host and port == self.port:
-            print("Node System: connect_to_node: Cannot connect with yourself!!")
+            print("You can't connect to yourself")
             return False
 
-        # Check if node is already connected with this node!
+        # Checking if you are already connected to this node
         for node in self.nodes_outbound:
             if node.host == host and node.port == port:
-                print("Node System: connect_to_node: Already connected with this node.")
+                print("You are already connected to this node")
                 return True
 
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            print("Node System: connecting to %s port %s" % (host, port))
             sock.connect((host, port))
 
             # Basic information exchange (not secure) of the id's of the nodes!
@@ -147,15 +127,9 @@ class Node(threading.Thread):
                 self.nodes_outbound.append(thread_client)
                 self.outbound_node_connected(thread_client)
             else:
-                print(
-                    "Node System: Could not connect with node because node is not unl node."
-                )
-        except Exception as e:
-            print(
-                "Node System: TcpServer.connect_to_node: Could not connect with node. ("
-                + str(e)
-                + ")"
-            )
+                print("Node is not unl node")
+        except:
+            print("Could not connect with node")
 
     def create_the_new_connection(self, connection, id, host, port):
 
@@ -170,9 +144,7 @@ class Node(threading.Thread):
             del self.nodes_outbound[self.nodes_outbound.index(node)]
 
         else:
-            print(
-                "Node System: Node disconnect_to_node: cannot disconnect with a node with which we are not connected."
-            )
+            print("Not connected with node")
 
     def run(self):
 
@@ -195,9 +167,7 @@ class Node(threading.Thread):
 
                     self.inbound_node_connected(thread_client)
                 else:
-                    print(
-                        "Node System: Could not connect with node because node is not unl node."
-                    )
+                    print("Node is not a unl node")
 
             except socket.timeout:
                 pass
@@ -207,7 +177,6 @@ class Node(threading.Thread):
 
             time.sleep(0.01)
 
-        print("Node System: Node stopping...")
         for t in self.nodes_inbound:
             t.stop()
 
@@ -224,35 +193,7 @@ class Node(threading.Thread):
 
         self.sock.settimeout(None)
         self.sock.close()
-        print("Node System: Node stopped")
-
-    def outbound_node_connected(self, node):
-        print("Node System: outbound_node_connected: " + node.id)
-
-    def inbound_node_connected(self, node):
-        print("Node System: inbound_node_connected: " + node.id)
-
-    def inbound_node_disconnected(self, node):
-        print("Node System: inbound_node_disconnected: " + node.id)
-
-    def outbound_node_disconnected(self, node):
-        print("Node System: outbound_node_disconnected: " + node.id)
 
     def message_from_node(self, node, data):
-        print("Node System: message_from_node: " + node.id + ": " + str(data))
         if self.callback is not None:
             self.callback("message_from_node", self, node, data)
-
-    def node_disconnect_to_outbound_node(self, node):
-        print(
-            "Node System: node wants to disconnect with oher outbound node: " + node.id
-        )
-
-    def node_request_to_stop(self):
-        print("Node System: node is requested to stop!")
-
-    def __str__(self):
-        return "Node: {}:{}".format(self.host, self.port)
-
-    def __repr__(self):
-        return "<Node {}:{} id: {}>".format(self.host, self.port, self.id)

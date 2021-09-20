@@ -37,22 +37,18 @@ class Node_Connection(threading.Thread):
                 json_data = json_data.encode(encoding_type) + self.EOT_CHAR
                 self.sock.sendall(json_data)
 
-            except TypeError as type_error:
-                print("Node System: This dict is invalid")
-                print(type_error)
+            except TypeError:
+                print("Invalid json")
 
-            except Exception as e:
-                print("Node System: Unexpected Error in send message")
-                print(e)
+            except:
+                print("Unexpected error while sending")
 
         elif isinstance(data, bytes):
             bin_data = data + self.EOT_CHAR
             self.sock.sendall(bin_data)
 
         else:
-            print(
-                "Node System: Node System: Datatype used is not valid please use str, dict (will be send as json) or bytes"
-            )
+            print("invalid data type")
 
     def stop(self):
         self.terminate_flag.set()
@@ -81,14 +77,12 @@ class Node_Connection(threading.Thread):
                 chunk = self.sock.recv(4096)
 
             except socket.timeout:
-                print("Node System: Node_Connection: timeout")
+                print("socket timeout")
 
-            except Exception as e:
+            except:
                 self.terminate_flag.set()
                 print("Node System: Unexpected error")
-                print(e)
 
-            # BUG: possible buffer overflow when no EOT_CHAR is found => Fix by max buffer count or so?
             if chunk != b"":
                 buffer += chunk
                 eot_pos = buffer.find(self.EOT_CHAR)
@@ -104,24 +98,11 @@ class Node_Connection(threading.Thread):
 
             time.sleep(0.01)
 
-        # IDEA: Invoke (event) a method in main_node so the user is able to send a bye message to the node before it is closed?
-
         self.sock.settimeout(None)
         self.sock.close()
-        print("Node System: Node_Connection: Stopped")
 
     def set_info(self, key, value):
         self.info[key] = value
 
     def get_info(self, key):
         return self.info[key]
-
-    def __str__(self):
-        return "Node_Connection: {}:{} <-> {}:{} ({})".format(
-            self.main_node.host, self.main_node.port, self.host, self.port, self.id
-        )
-
-    def __repr__(self):
-        return "<Node_Connection: Node {}:{} <-> Connection {}:{}>".format(
-            self.main_node.host, self.main_node.port, self.host, self.port
-        )

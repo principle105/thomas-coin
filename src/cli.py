@@ -13,6 +13,9 @@ def create_wallet():
     wallet = Wallet(secret=secret)
     return wallet
 
+def start_node(ip: str, port: int):
+    pass
+
 
 if __name__ == "__main__":
     show_start_menu()
