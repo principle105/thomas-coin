@@ -6,11 +6,9 @@ from config import BLOCK_PATH
 
 
 class Blockchain:
-    def __init__(self, pruned: bool = False):
-        self.blocks = []
-        self.pruned = pruned
-
-        self.add_genesis_block()
+    def __init__(self, blocks: list[Block] = []):
+        
+        self.blocks = [self.get_genesis_block()] + blocks
 
     def add_block(self, block: Block):
         # Checking if the block is valid
@@ -28,9 +26,8 @@ class Blockchain:
                     bal += t.amount
         return bal
 
-    def add_genesis_block(self):
-        genesis_block = Block.from_json(**GENESIS_BLOCK_DATA)
-        self.blocks.append(genesis_block)
+    def get_genesis_block(self):
+        return Block.from_json(**GENESIS_BLOCK_DATA)
 
     def get_json(self):
         blocks = []
@@ -43,7 +40,7 @@ class Blockchain:
         dump_block_data(self.blocks[1:])
 
     @classmethod
-    def from_local(cls, validate: bool = True):
+    def from_local(cls, validate: bool = False):
         chain = cls()
 
         blocks = get_block_data()

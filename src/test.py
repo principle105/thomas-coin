@@ -12,36 +12,38 @@ from os import getenv
 import time
 
 if __name__ == "__main__":
-    # owner = Wallet(getenv("OWNER_PRIVATE_KEY"))
+    owner = Wallet(getenv("OWNER_PRIVATE_KEY"))
 
-    # other = Wallet("1ef98e260c70ae196079655392461226c42778b8373ba9780e497272e47d53dc")
+    other = Wallet("1ef98e260c70ae196079655392461226c42778b8373ba9780e497272e47d53dc")
 
-    # chain = Blockchain()
+    chain = Blockchain()
 
-    # for _ in range(200):
-    #     # sending coins
-    #     b = Block(len(chain.blocks), chain.blocks[-1].hash)
-    #     if len(chain.blocks) == 1:
+    print(chain.blocks)
 
-    #         t = Transaction(owner.public_key, other.address, 1, 0)
+    for _ in range(200):
+        # sending coins
+        b = Block(len(chain.blocks), chain.blocks[-1].hash)
+        if len(chain.blocks) == 1:
 
-    #         t.sign(owner)
+            t = Transaction(owner.public_key, other.address, 1, 0)
 
-    #         b.append_transaction(t)
+            t.sign(owner)
 
-    #     b.sign(owner)
+            b.append_transaction(t)
 
-    #     chain.add_block(b)
+        b.sign(owner)
 
-    # print("OWNER", chain.get_balance(owner.address))
-    # print("OTHER", chain.get_balance(other.address))
+        chain.add_block(b)
 
-    # a = time.time()
-    # chain.save_locally()
+    print("OWNER", chain.get_balance(owner.address))
+    print("OTHER", chain.get_balance(other.address))
 
-    # print("TO SAVE",time.time() - a)
+    a = time.time()
+    chain.save_locally()
+
+    print("TO SAVE", time.time() - a)
     a = time.time()
 
-    newchain = Blockchain.from_local(False)
+    newchain = Blockchain.from_local()
 
     print("TO RELOAD", time.time() - a)
