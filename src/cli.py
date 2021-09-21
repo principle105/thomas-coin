@@ -13,6 +13,7 @@ def create_wallet():
     wallet = Wallet(secret=secret)
     return wallet
 
+
 def start_node(ip: str, port: int):
     pass
 

@@ -5,6 +5,7 @@ from hashlib import sha256
 
 class Wallet:
     def __init__(self, secret: str = None):
+        # Creating the signing key
         if secret is None:
             print("Generating a new wallet")
             self.sk = ecdsa.SigningKey.generate(curve=SECP256k1)
@@ -20,10 +21,11 @@ class Wallet:
 
         self.private_key = self.sk.to_string().hex()
 
-        self.address = self.convert_to_address(self.public_key)
+        self.address = Wallet.convert_to_address(self.public_key)
 
     # https://ethereum.stackexchange.com/questions/3542/how-are-ethereum-addresses-generated
-    def convert_to_address(self, public_key: str):
+    @classmethod
+    def convert_to_address(cls, public_key: str):
         return (
             "T"
             + sha256(

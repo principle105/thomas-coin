@@ -7,7 +7,7 @@ from config import BLOCK_PATH
 
 class Blockchain:
     def __init__(self, blocks: list[Block] = []):
-        
+
         self.blocks = [self.get_genesis_block()] + blocks
 
     def add_block(self, block: Block):

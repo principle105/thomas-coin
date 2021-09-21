@@ -96,7 +96,7 @@ class Node(threading.Thread):
             print("Node not found")
 
     def connect_to_node(self, host, port):
-        
+
         # Making sure you can't connect with yourself
         if host == self.host and port == self.port:
             print("You can't connect to yourself")

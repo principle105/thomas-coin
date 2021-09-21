@@ -34,12 +34,10 @@ class Transaction:
 
         if timestamp is None:
             timestamp = time.time()
-
         self.timestamp = timestamp
 
         if sender is None:
-            sender = self.convert_to_address(sender_key)
-
+            sender = Wallet.convert_to_address(sender_key)
         self.sender = sender
 
         self.sender_key = sender_key
@@ -57,15 +55,6 @@ class Transaction:
             hash = self.get_hash()
 
         self.hash = hash
-
-    # https://ethereum.stackexchange.com/questions/3542/how-are-ethereum-addresses-generated
-    def convert_to_address(self, public_key: str):
-        return (
-            "T"
-            + sha256(
-                sha256(public_key.encode("utf-8")).hexdigest().encode("utf-8")
-            ).hexdigest()[-40:]
-        )
 
     @property
     def sender_public_key(self):
