@@ -3,11 +3,12 @@ import hashlib
 import random
 import socket
 import time
+from .node_utils import node_is_unl
 from .node_connection import Node_Connection
 
 # Based on https://github.com/macsnoeren/python-p2p-network
 class Node(threading.Thread):
-    def __init__(self, host, port, callback=None):
+    def __init__(self, host: str, port: int, callback=None):
 
         super(Node, self).__init__()
 

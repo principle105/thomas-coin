@@ -1,27 +1,31 @@
+import typer
+from typer.colors import BRIGHT_YELLOW, BRIGHT_BLUE
 from wallet import Wallet
+from node import Node
 
+app = typer.Typer()
 
-def show_start_menu():
-    print("Welcome to thomas token (THOM)")
+@app.command()
+def wallet():
 
-
-def create_wallet():
     secret = input("Wallet secret: ")
     if not secret:
         secret = None
 
     wallet = Wallet(secret=secret)
-    return wallet
+    typer.secho(f"ADDRESS: {wallet.address}", fg=BRIGHT_BLUE)
+    typer.secho(f"PRIVATE KEY: {wallet.private_key}", fg=BRIGHT_YELLOW)
 
 
-def start_node(ip: str, port: int):
-    pass
+@app.command()
+def node():
+    host = input("Host: ") # Eg: "127.0.0.1"
+    port = int(input("Port: "))
+
+    node = Node(host, port)
+
+    node.run()
 
 
 if __name__ == "__main__":
-    show_start_menu()
-
-    wallet = create_wallet()
-    print("ADDRESS:", wallet.address)
-    print("PUBLIC KEY:", wallet.public_key)
-    print("PRIVATE KEY:", wallet.private_key)
+    app()

@@ -2,10 +2,11 @@ import threading
 import json
 import socket
 import time
+from .node_utils import save_connected_node
 
-
+# Based on https://github.com/macsnoeren/python-p2p-network
 class Node_Connection(threading.Thread):
-    def __init__(self, main_node, sock, id, host, port):
+    def __init__(self, main_node, sock, id, host: str, port: int):
 
         super(Node_Connection, self).__init__()
 

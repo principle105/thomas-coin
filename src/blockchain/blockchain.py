@@ -1,6 +1,5 @@
 from .block import Block
 from .storage import get_block_data, dump_block_data
-from natsort import natsorted
 from constants import GENESIS_BLOCK_DATA
 from config import BLOCK_PATH
 

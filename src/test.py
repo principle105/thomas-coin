@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     print(chain.blocks)
 
-    for _ in range(200):
+    for _ in range(20):
         # sending coins
         b = Block(len(chain.blocks), chain.blocks[-1].hash)
         if len(chain.blocks) == 1:
