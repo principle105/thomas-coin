@@ -19,13 +19,16 @@ def wallet():
 
 @app.command()
 def node():
-    host = input("Host: ") # Eg: "127.0.0.1"
-    port = int(input("Port: "))
+    host = input("Host: ") or "127.0.0.1"
+    port = int(input("Port: ") or 3000)
 
     node = Node(host, port)
 
-    node.run()
+    node.start()
 
+    host = input("Host: ") or "127.0.0.1"
+    port = int(input("Port: ") or 3000)
+    node.connect_to_node(host, port)
 
 if __name__ == "__main__":
     app()
