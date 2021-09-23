@@ -22,13 +22,14 @@ def save_connected_node(host, port, id):
     with open(CONNECTED_NODE_PATH, "w") as f:
         json.dump(node_list, f)
 
+
 def get_unl_nodes():
     with open(INITIAL_NODE_PATH, "rb") as f:
         return json.load(f)
 
+
 def node_is_unl(node_id):
     for unl in get_unl_nodes():
-        temp_unl = unl
-        if node_id == temp_unl:
+        if node_id == unl:
             return True
     return False

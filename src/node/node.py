@@ -3,12 +3,16 @@ import hashlib
 import random
 import socket
 import time
-from .node_utils import node_is_unl
+from .node_utils import node_is_unl, get_unl_nodes
 from .node_connection import Node_Connection
 
 # Based on https://github.com/macsnoeren/python-p2p-network
 class Node(threading.Thread):
-    def __init__(self, host: str, port: int, callback=None):
+    main_node = None
+
+    def __init__(self, host: str, port: int):
+
+        self.__class__.main_node = self
 
         super(Node, self).__init__()
 
@@ -16,8 +20,6 @@ class Node(threading.Thread):
 
         self.host = host
         self.port = port
-
-        self.callback = callback
 
         self.nodes_inbound = []
 
@@ -53,13 +55,11 @@ class Node(threading.Thread):
 
         for n in self.nodes_inbound:
             if n.terminate_flag.is_set():
-                self.inbound_node_disconnected(n)
                 n.join()
                 del self.nodes_inbound[self.nodes_inbound.index(n)]
 
         for n in self.nodes_outbound:
             if n.terminate_flag.is_set():
-                self.outbound_node_disconnected(n)
                 n.join()
                 del self.nodes_outbound[self.nodes_inbound.index(n)]
 
@@ -96,6 +96,10 @@ class Node(threading.Thread):
         else:
             print("Node not found")
 
+    def connect_to_unl_nodes(self):
+        for node in get_unl_nodes():
+            self.connect_to_node(**node)
+
     def connect_to_node(self, host, port):
 
         # Making sure you can't connect with yourself
@@ -117,19 +121,16 @@ class Node(threading.Thread):
             sock.send(self.id.encode("utf-8"))  # Send my id to the connected node!
             connected_node_id = sock.recv(4096).decode(
                 "utf-8"
-            )  # When a node is connected, it sends it id!
+            )  # When a node is connected, it sends the id
 
-            if node_is_unl(connected_node_id):
-                thread_client = self.create_the_new_connection(
-                    sock, connected_node_id, host, port
-                )
-                thread_client.start()
+            thread_client = self.create_the_new_connection(
+                sock, connected_node_id, host, port
+            )
+            thread_client.start()
 
-                self.nodes_outbound.append(thread_client)
-                self.outbound_node_connected(thread_client)
-            else:
-                print("Node is not unl node")
-        except:
+            self.nodes_outbound.append(thread_client)
+        except Exception as e:
+            print(str(e))
             print("Could not connect with node")
 
     def create_the_new_connection(self, connection, id, host, port):
@@ -139,7 +140,6 @@ class Node(threading.Thread):
     def disconnect_to_node(self, node):
 
         if node in self.nodes_outbound:
-            self.node_disconnect_to_outbound_node(node)
             node.stop()
             node.join()
             del self.nodes_outbound[self.nodes_outbound.index(node)]
@@ -155,20 +155,15 @@ class Node(threading.Thread):
 
                 connected_node_id = connection.recv(4096).decode("utf-8")
                 connection.send(self.id.encode("utf-8"))
-                if node_is_unl(connected_node_id):
-                    thread_client = self.create_the_new_connection(
-                        connection,
-                        connected_node_id,
-                        client_address[0],
-                        client_address[1],
-                    )
-                    thread_client.start()
+                thread_client = self.create_the_new_connection(
+                    connection,
+                    connected_node_id,
+                    client_address[0],
+                    client_address[1],
+                )
+                thread_client.start()
 
-                    self.nodes_inbound.append(thread_client)
-
-                    self.inbound_node_connected(thread_client)
-                else:
-                    print("Node is not a unl node")
+                self.nodes_inbound.append(thread_client)
 
             except socket.timeout:
                 pass
@@ -196,5 +191,4 @@ class Node(threading.Thread):
         self.sock.close()
 
     def message_from_node(self, node, data):
-        if self.callback is not None:
-            self.callback("message_from_node", self, node, data)
+        pass

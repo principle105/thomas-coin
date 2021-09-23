@@ -5,6 +5,7 @@ from node import Node
 
 app = typer.Typer()
 
+
 @app.command()
 def wallet():
 
@@ -29,6 +30,7 @@ def node():
     host = input("Host: ") or "127.0.0.1"
     port = int(input("Port: ") or 3000)
     node.connect_to_node(host, port)
+
 
 if __name__ == "__main__":
     app()
