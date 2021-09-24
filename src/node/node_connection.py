@@ -2,7 +2,6 @@ import threading
 import json
 import socket
 import time
-from .node_utils import save_connected_node
 
 # Based on https://github.com/macsnoeren/python-p2p-network
 class Node_Connection(threading.Thread):
@@ -24,8 +23,6 @@ class Node_Connection(threading.Thread):
         self.EOT_CHAR = 0x04 .to_bytes(1, "big")
 
         self.info = {}
-
-        save_connected_node(host, port, id)
 
     def send(self, data, encoding_type="utf-8"):
 

@@ -27,10 +27,14 @@ def node():
 
     node.start()
 
-    host = input("Host: ") or "127.0.0.1"
-    port = int(input("Port: ") or 3000)
-    node.connect_to_node(host, port)
-
+    while True:
+        a = input("What do: ") or "connect"
+        if a == "connect":
+            host = input("Host: ") or "127.0.0.1"
+            port = int(input("Port: ") or 3000)
+            node.connect_to_node(host, port)
+        elif a == "send":
+            node.send_data_to_nodes(input("message"))
 
 if __name__ == "__main__":
     app()

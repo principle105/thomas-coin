@@ -3,7 +3,7 @@ import hashlib
 import random
 import socket
 import time
-from .node_utils import node_is_unl, get_unl_nodes
+from .node_utils import get_unl
 from .node_connection import Node_Connection
 
 # Based on https://github.com/macsnoeren/python-p2p-network
@@ -44,7 +44,7 @@ class Node(threading.Thread):
 
     def generate_id(self):
         id = hashlib.sha512()
-        t = self.host + str(self.port) + str(random.randint(1, 99999999))
+        t = self.host + str(self.port)
         id.update(t.encode("ascii"))
         return id.hexdigest()
 
@@ -97,7 +97,7 @@ class Node(threading.Thread):
             print("Node not found")
 
     def connect_to_unl_nodes(self):
-        for node in get_unl_nodes():
+        for node in get_unl():
             self.connect_to_node(**node)
 
     def connect_to_node(self, host, port):
@@ -117,24 +117,23 @@ class Node(threading.Thread):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((host, port))
 
-            # Basic information exchange (not secure) of the id's of the nodes!
-            sock.send(self.id.encode("utf-8"))  # Send my id to the connected node!
+            sock.send(self.id.encode("utf-8")) 
             connected_node_id = sock.recv(4096).decode(
                 "utf-8"
-            )  # When a node is connected, it sends the id
+            )
 
             thread_client = self.create_the_new_connection(
                 sock, connected_node_id, host, port
             )
             thread_client.start()
-
+            
             self.nodes_outbound.append(thread_client)
+
         except Exception as e:
             print(str(e))
             print("Could not connect with node")
 
     def create_the_new_connection(self, connection, id, host, port):
-
         return Node_Connection(self, connection, id, host, port)
 
     def disconnect_to_node(self, node):
@@ -155,6 +154,7 @@ class Node(threading.Thread):
 
                 connected_node_id = connection.recv(4096).decode("utf-8")
                 connection.send(self.id.encode("utf-8"))
+
                 thread_client = self.create_the_new_connection(
                     connection,
                     connected_node_id,
@@ -191,4 +191,4 @@ class Node(threading.Thread):
         self.sock.close()
 
     def message_from_node(self, node, data):
-        pass
+        print(node, data)
