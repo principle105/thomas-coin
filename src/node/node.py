@@ -1,6 +1,5 @@
 import threading
 import hashlib
-import random
 import socket
 import time
 from .node_utils import get_unl
@@ -191,4 +190,18 @@ class Node(threading.Thread):
         self.sock.close()
 
     def message_from_node(self, node, data):
-        print(node, data)
+        if not isinstance(data, dict):
+            print("Data is not in dictionary format")
+            return
+        
+        if list(data.keys()) != ["type", "data"]:
+            print("Incorrect fields")
+            return
+
+        if data["type"] == "chain":
+            pass
+        elif data["type"] == "blocks":
+            pass
+        elif data["type"] == "block":
+            pass
+
