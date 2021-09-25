@@ -2,6 +2,7 @@ import typer
 from typer.colors import BRIGHT_YELLOW, BRIGHT_BLUE
 from wallet import Wallet
 from node import Node
+from blockchain import Blockchain, Block
 
 app = typer.Typer()
 
@@ -34,7 +35,14 @@ def node():
             port = int(input("Port: ") or 3000)
             node.connect_to_node(host, port)
         elif a == "send":
-            node.send_data_to_nodes(input("message"))
+            chain = Blockchain()
+            fraud = bool(input("FRAUD: "))
+            if fraud:
+                for i in range(3):
+                    chain.blocks.append(Block(i, "0"))
+                
+                node.send_data_to_nodes({"type": "chain", "data": chain.get_json()})
+
 
 if __name__ == "__main__":
     app()

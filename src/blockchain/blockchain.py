@@ -1,11 +1,13 @@
 from .block import Block
 from .storage import get_block_data, dump_block_data
 from constants import GENESIS_BLOCK_DATA
-from config import BLOCK_PATH
 
 
 class Blockchain:
+    main_chain = None
+ 
     def __init__(self, blocks: list[Block] = []):
+        self.__class__.main_node = self
 
         self.blocks = [self.get_genesis_block()] + blocks
 
@@ -14,6 +16,10 @@ class Blockchain:
         block.validate(self)
 
         self.blocks.append(block)
+
+    def validate(self):
+        for block in self.blocks:
+            block.validate(self)
 
     def get_balance(self, address: str):
         bal = 0
@@ -39,10 +45,9 @@ class Blockchain:
         dump_block_data(self.blocks[1:])
 
     @classmethod
-    def from_local(cls, validate: bool = False):
+    def from_json(cls, blocks: dict, validate: bool = False):
         chain = cls()
 
-        blocks = get_block_data()
         if validate:
             for b in blocks:
                 chain.add_block(b)
@@ -50,3 +55,9 @@ class Blockchain:
             chain.blocks = chain.blocks + blocks
 
         return chain
+
+    @classmethod
+    def from_local(cls, validate: bool = False):
+        blocks = get_block_data()
+        return cls.from_json(blocks, validate)
+        

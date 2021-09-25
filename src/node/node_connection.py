@@ -65,6 +65,9 @@ class Node_Connection(threading.Thread):
             return packet
 
     def run(self):
+        """
+        Thread waits for get data from node and calls the message_from_node method 
+        """
         self.sock.settimeout(10.0)
         buffer = b""
 

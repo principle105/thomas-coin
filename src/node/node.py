@@ -4,6 +4,7 @@ import socket
 import time
 from .node_utils import get_unl
 from .node_connection import Node_Connection
+from blockchain import Blockchain
 
 # Based on https://github.com/macsnoeren/python-p2p-network
 class Node(threading.Thread):
@@ -20,8 +21,10 @@ class Node(threading.Thread):
         self.host = host
         self.port = port
 
+        # If the other node initiated the connection
         self.nodes_inbound = []
 
+        # If we initiated the connection
         self.nodes_outbound = []
 
         self.id = self.generate_id()
@@ -116,16 +119,14 @@ class Node(threading.Thread):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.connect((host, port))
 
-            sock.send(self.id.encode("utf-8")) 
-            connected_node_id = sock.recv(4096).decode(
-                "utf-8"
-            )
+            sock.send(self.id.encode("utf-8"))
+            connected_node_id = sock.recv(4096).decode("utf-8")
 
             thread_client = self.create_the_new_connection(
                 sock, connected_node_id, host, port
             )
             thread_client.start()
-            
+
             self.nodes_outbound.append(thread_client)
 
         except Exception as e:
@@ -148,6 +149,7 @@ class Node(threading.Thread):
     def run(self):
 
         while not self.terminate_flag.is_set():
+            # Accepting incoming connections
             try:
                 connection, client_address = self.sock.accept()
 
@@ -171,6 +173,8 @@ class Node(threading.Thread):
                 raise e
 
             time.sleep(0.01)
+        
+        print("Node stopping")
 
         for t in self.nodes_inbound:
             t.stop()
@@ -188,20 +192,26 @@ class Node(threading.Thread):
 
         self.sock.settimeout(None)
         self.sock.close()
+        print("Node stoped")
 
     def message_from_node(self, node, data):
         if not isinstance(data, dict):
             print("Data is not in dictionary format")
             return
-        
+
         if list(data.keys()) != ["type", "data"]:
             print("Incorrect fields")
             return
 
         if data["type"] == "chain":
-            pass
+            try:
+                chain = Blockchain.from_json(data["data"], True)
+            except:
+                print("Invalid chain data")
+            else:
+                chain
+
         elif data["type"] == "blocks":
             pass
         elif data["type"] == "block":
             pass
-
