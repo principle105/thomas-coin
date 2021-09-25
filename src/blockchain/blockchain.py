@@ -1,19 +1,35 @@
+import os
+import _pickle as pickle
 from .block import Block
-from .storage import get_block_data, dump_block_data
+from config import BLOCK_PATH
 from constants import GENESIS_BLOCK_DATA
+
+
+def get_block_data():
+    if not os.path.exists(BLOCK_PATH):
+        return False
+
+    with open(BLOCK_PATH, "rb") as f:
+        return pickle.load(f)
+
+
+def dump_block_data(data: list):
+    with open(BLOCK_PATH, "wb") as f:
+        pickle.dump(data, f, protocol=2)
 
 
 class Blockchain:
     main_chain = None
- 
+
     def __init__(self, blocks: list[Block] = []):
         self.__class__.main_node = self
 
         self.blocks = [self.get_genesis_block()] + blocks
 
-    def add_block(self, block: Block):
-        # Checking if the block is valid
-        block.validate(self)
+    def add_block(self, block: Block, validate: bool = True):
+        if validate:
+            # Checking if the block is valid
+            block.validate(self)
 
         self.blocks.append(block)
 
@@ -45,19 +61,31 @@ class Blockchain:
         dump_block_data(self.blocks[1:])
 
     @classmethod
-    def from_json(cls, blocks: dict, validate: bool = False):
+    def from_local(cls, validate: bool = False):
+        blocks = get_block_data()
         chain = cls()
 
-        if validate:
-            for b in blocks:
-                chain.add_block(b)
-        else:
-            chain.blocks = chain.blocks + blocks
+        if blocks:
+            if validate:
+                for b in blocks:
+                    chain.add_block(b)
+            else:
+                chain.blocks = chain.blocks + blocks
 
         return chain
 
     @classmethod
-    def from_local(cls, validate: bool = False):
-        blocks = get_block_data()
-        return cls.from_json(blocks, validate)
+    def from_json(cls, blocks: list, validate: bool = False):
+        chain = cls()
         
+        for b in blocks:
+            block = Block.from_json(**b)
+            chain.add_block(block, validate)
+
+        return chain
+
+    @classmethod
+    def set_main(cls, chain, save: bool = True):
+        if save:
+            chain.save_locally()
+        cls.main_chain = chain

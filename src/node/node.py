@@ -2,9 +2,30 @@ import threading
 import hashlib
 import socket
 import time
-from .node_utils import get_unl
+import json
 from .node_connection import Node_Connection
 from blockchain import Blockchain
+from config import UNL_PATH
+
+def get_unl():
+    with open(UNL_PATH, "r") as f:
+        return json.load(f)
+
+
+def get_connected_unl():
+    unl = get_unl()
+
+    nodes = []
+    for node in Node.main_node.nodes_inbound + Node.main_node.nodes_outbound:
+        if {"host": node.host, "port": node.port} in unl:
+            nodes.append(node)
+
+    return nodes
+
+
+def node_is_unl(host, port):
+    return {"host": host, "port": port} in get_unl()
+
 
 # Based on https://github.com/macsnoeren/python-p2p-network
 class Node(threading.Thread):
@@ -65,7 +86,9 @@ class Node(threading.Thread):
                 n.join()
                 del self.nodes_outbound[self.nodes_inbound.index(n)]
 
-    def send_data_to_nodes(self, data, exclude=[]):
+    def send_data_to_nodes(self, msg_type: str, msg_data, exclude=[]):
+
+        
 
         self.message_count_send = self.message_count_send + 1
 
@@ -73,7 +96,7 @@ class Node(threading.Thread):
 
             if n not in exclude:
                 try:
-                    self.send_data_to_node(n, data)
+                    self.send_data_to_node(n, msg_type, msg_data)
                 except:  # lgtm [py/catch-base-exception]
                     pass
 
@@ -81,11 +104,16 @@ class Node(threading.Thread):
 
             if n not in exclude:
                 try:
-                    self.send_data_to_node(n, data)
+                    self.send_data_to_node(n, msg_type, msg_data)
                 except:  # lgtm [py/catch-base-exception]
                     pass
 
-    def send_data_to_node(self, n, data):
+    def send_data_to_node(self, n, msg_type: str, msg_data):
+
+        data = {
+            "type": msg_type,
+            "data": msg_data
+        }
 
         self.message_count_send = self.message_count_send + 1
         self.delete_closed_connections()
@@ -173,7 +201,7 @@ class Node(threading.Thread):
                 raise e
 
             time.sleep(0.01)
-        
+
         print("Node stopping")
 
         for t in self.nodes_inbound:
@@ -194,24 +222,45 @@ class Node(threading.Thread):
         self.sock.close()
         print("Node stoped")
 
+    def request_chain(self):
+        # Getting nodes that we are connected to from unl
+        unl_list = get_connected_unl()
+        # Requesting block from first unl node
+        self.send_data_to_node(unl_list[0], "sendchain", {})
+
+    def send_chain(self, node):
+        # Sending the entire blockchain minus the genesis block
+        self.send_data_to_node(node, "chain", Blockchain.main_chain.get_json()[1:])
+
     def message_from_node(self, node, data):
-        if not isinstance(data, dict):
-            print("Data is not in dictionary format")
-            return
+        print("message received")
+        try:
 
-        if list(data.keys()) != ["type", "data"]:
-            print("Incorrect fields")
-            return
+            if list(data.keys()) != ["type", "data"]:
+                print("Incorrect fields")
+                return
 
-        if data["type"] == "chain":
-            try:
-                chain = Blockchain.from_json(data["data"], True)
-            except:
-                print("Invalid chain data")
+            # TODO: check if unl
+            if data["type"] == "chain":
+                print("Received a chain")
+                if Blockchain.main_chain is None:
+                    try:
+                        chain = Blockchain.from_json(data["data"], validate=True)
+                    except Exception as e:
+                        print("Invalid chain data", str(e))
+                    else:
+                        Blockchain.set_main(chain)
+
+            elif data["type"] == "sendchain":
+                print("Sending chain")
+                self.send_chain(node)
+
+            elif data["type"] == "block":
+                print("recieved a block")
+                pass
+
             else:
-                chain
-
-        elif data["type"] == "blocks":
-            pass
-        elif data["type"] == "block":
-            pass
+                print(node, data)
+        
+        except Exception as e:
+            print(str(e))

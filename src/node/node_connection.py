@@ -66,7 +66,7 @@ class Node_Connection(threading.Thread):
 
     def run(self):
         """
-        Thread waits for get data from node and calls the message_from_node method 
+        Thread waits for get data from node and calls the message_from_node method
         """
         self.sock.settimeout(10.0)
         buffer = b""
@@ -78,7 +78,8 @@ class Node_Connection(threading.Thread):
                 chunk = self.sock.recv(4096)
 
             except socket.timeout:
-                print("socket timeout")
+                pass
+                # print("socket timeout")
 
             except:
                 self.terminate_flag.set()
