@@ -137,11 +137,13 @@ class Node(threading.Thread):
             print("Node not found")
 
     def connect_to_unl_nodes(self):
+        print("connecting to nodes from unl")
+        my_node = {"host": self.host, "port": self.port}
         for node in get_unl():
-            self.connect_to_node(**node)
+            if node != my_node:
+                self.connect_to_node(**node)
 
     def connect_to_node(self, host, port):
-
         # Making sure you can't connect with yourself
         if host == self.host and port == self.port:
             print("You can't connect to yourself")
@@ -243,6 +245,11 @@ class Node(threading.Thread):
         # Sending the entire blockchain minus the genesis block
         self.send_data_to_node(node, "chain", Blockchain.main_chain.get_json()[1:])
 
+    def send_transaction(self, data: dict):
+        print("Sending transaction")
+        # Sending the transaction data to all the nodes
+        self.send_data_to_nodes("newtrans", data)
+
     def message_from_node(self, node, data):
         print("message received")
         try:
@@ -270,6 +277,9 @@ class Node(threading.Thread):
             elif data["type"] == "sendchain":
                 print("Sending chain")
                 self.send_chain(node)
+
+            elif data["type"] == "newtrans":
+                print("Received a new transaction froma another node")
 
             elif data["type"] == "block":
                 print("recieved a block")

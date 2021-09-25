@@ -1,8 +1,10 @@
 import typer
+import getpass
 from typer.colors import BRIGHT_YELLOW, BRIGHT_BLUE
 from wallet import Wallet
 from node import Node
 from blockchain import Blockchain, Block
+from transaction import Transaction
 
 app = typer.Typer()
 
@@ -40,6 +42,7 @@ def node():
     # Starting node
     node.start()
 
+    # For testing
     while True:
         chain = Blockchain.from_local()
 
@@ -47,6 +50,25 @@ def node():
 
         a = input("What do: ") or "connect"
         if a == "connect":
+            node.connect_to_unl_nodes()
+
+        elif a == "send":
+            pk = getpass.getpass(prompt="Your Private Key: ")
+            wallet = Wallet(pk)
+
+            amt = int(input("Amount: "))
+
+            adr = input("Receiver Address: ")
+
+            t = Transaction(wallet.public_key, adr, amt, 0)
+
+            t.sign(wallet)
+
+            chain.add_pending_transaction(t)
+
+            node.send_transaction(t.get_json())
+
+        elif a == "connect-single":
             host = input("Host: ") or "127.0.0.1"
             port = int(input("Port: ") or 3000)
             node.connect_to_node(host, port)

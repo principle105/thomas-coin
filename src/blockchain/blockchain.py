@@ -1,6 +1,7 @@
 import os
 import _pickle as pickle
 from .block import Block
+from transaction import Transaction
 from config import BLOCK_PATH
 from constants import GENESIS_BLOCK_DATA
 
@@ -26,7 +27,15 @@ class Blockchain:
 
         self.blocks = [self.get_genesis_block()] + blocks
 
+        # Blocks that are pending to be added to the blockchain
+        self.pending: list[Block] = []
+
     def add_block(self, block: Block, validate: bool = True):
+        # Removing the block transactions from pending
+        for t in block.transactions:
+            if t in self.pending:
+                self.pending.remove(t)
+
         if validate:
             # Checking if the block is valid
             block.validate(self)
@@ -60,6 +69,15 @@ class Blockchain:
     def save_locally(self):
         dump_block_data(self.blocks[1:])
 
+    def add_pending_transaction(self, transaction: Transaction):
+        # Making sure the transaction is valid
+        try:
+            transaction.validate(self)
+        except:
+            print("The transaction is not valid")
+        else:
+            self.pending.append(transaction)
+            
     @classmethod
     def from_local(cls, validate: bool = False):
         blocks = get_block_data()

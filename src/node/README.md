@@ -16,3 +16,4 @@
 
 "chain" - Entire blockchain excluding the genesis block
 "block" - Block in the blockchain
+"newtrans" - Transaction
