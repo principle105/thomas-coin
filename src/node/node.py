@@ -11,12 +11,14 @@ def get_unl():
     with open(UNL_PATH, "r") as f:
         return json.load(f)
 
-
 def get_connected_unl():
     unl = get_unl()
 
+    print(unl)
+
     nodes = []
     for node in Node.main_node.nodes_inbound + Node.main_node.nodes_outbound:
+        print({"host": node.host, "port": node.port})
         if {"host": node.host, "port": node.port} in unl:
             nodes.append(node)
 
@@ -26,6 +28,16 @@ def get_connected_unl():
 def node_is_unl(host, port):
     return {"host": host, "port": port} in get_unl()
 
+def compare_chains(other_chain: Blockchain, our_chain: Blockchain):
+    other_chain, our_chain = other_chain.blocks, our_chain.blocks
+    """
+    Validates another blockchain against ours
+    """
+    for i in range(len(our_chain)):
+        if other_chain[i] != our_chain[i]:
+            return False
+            
+    return True
 
 # Based on https://github.com/macsnoeren/python-p2p-network
 class Node(threading.Thread):
@@ -87,8 +99,6 @@ class Node(threading.Thread):
                 del self.nodes_outbound[self.nodes_inbound.index(n)]
 
     def send_data_to_nodes(self, msg_type: str, msg_data, exclude=[]):
-
-        
 
         self.message_count_send = self.message_count_send + 1
 
@@ -225,8 +235,9 @@ class Node(threading.Thread):
     def request_chain(self):
         # Getting nodes that we are connected to from unl
         unl_list = get_connected_unl()
-        # Requesting block from first unl node
-        self.send_data_to_node(unl_list[0], "sendchain", {})
+        if unl_list:
+            # Requesting block from first unl node
+            self.send_data_to_node(unl_list[0], "sendchain", {})
 
     def send_chain(self, node):
         # Sending the entire blockchain minus the genesis block
@@ -243,13 +254,18 @@ class Node(threading.Thread):
             # TODO: check if unl
             if data["type"] == "chain":
                 print("Received a chain")
-                if Blockchain.main_chain is None:
-                    try:
-                        chain = Blockchain.from_json(data["data"], validate=True)
-                    except Exception as e:
-                        print("Invalid chain data", str(e))
-                    else:
-                        Blockchain.set_main(chain)
+                try:
+                    chain = Blockchain.from_json(data["data"], validate=True)
+                except Exception as e:
+                    print("Invalid chain data", str(e))
+                else:
+                    # Checking if chain is more recent
+                    if len(Blockchain.main_chain.blocks) > len(chain.blocks):
+                        if compare_chains(Blockchain.main_chain, chain.blocks):
+                            print("setting new main chain")
+                            Blockchain.set_main(chain)
+                        else:
+                            print("Invalid chain")
 
             elif data["type"] == "sendchain":
                 print("Sending chain")

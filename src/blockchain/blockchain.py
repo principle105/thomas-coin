@@ -87,5 +87,6 @@ class Blockchain:
     @classmethod
     def set_main(cls, chain, save: bool = True):
         if save:
+            print("Saving locally")
             chain.save_locally()
         cls.main_chain = chain

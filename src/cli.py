@@ -41,6 +41,10 @@ def node():
     node.start()
 
     while True:
+        chain = Blockchain.from_local()
+
+        chain.set_main(chain, False)
+
         a = input("What do: ") or "connect"
         if a == "connect":
             host = input("Host: ") or "127.0.0.1"
