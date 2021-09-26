@@ -84,7 +84,7 @@ class Transaction:
         return data
 
     def get_raw_transaction_string(self):
-        return f"{self.sender}{self.receiver}{self.amount}{self.timestamp}"
+        return f"{self.sender}{self.receiver}{self.amount}{self.timestamp}{self.nonce}"
 
     def get_hash(self) -> str:
         data = self.get_raw_transaction_string().encode()
@@ -127,6 +127,7 @@ class Transaction:
 
         # TODO: work on fees
 
+        # Using get instead of get_wallet method to prevent from creating new wallet in storage
         wallet = chain.state.wallets.get(self.sender, None)
 
         # Checking if the sender has enough coins to create the transaction
@@ -134,7 +135,6 @@ class Transaction:
             raise Exception("Wallet does not have enough coins for transaction")
 
         # Checking if nonce is invalid
-        print(wallet.nonce, self.nonce)
         if wallet.nonce >= self.nonce:
             raise Exception("Invalid nonce")
 

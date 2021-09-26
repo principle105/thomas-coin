@@ -260,13 +260,24 @@ class Node(threading.Thread):
         except:
             print("Invalid transaction given")
         else:
+            # Checking if duplicate
+            if t.get_json() in chain.pending:
+                print("found duplicate")
+                return
+
             # Adding to pending transactions
             result = chain.add_pending(t)
 
             # If valid
             if result:
                 # Broadcasting new transaction to other nodes except the original
-                self.send_data_to_nodes("newtrans", data, [node])
+                h = self.port == 5000
+                if h:
+                    self.send_data_to_nodes("newtrans", data)
+                    self.send_data_to_nodes("newtrans", data)
+                    self.send_data_to_nodes("newtrans", data)
+                else:
+                    self.send_data_to_nodes("newtrans", data, [node])
 
     def message_from_node(self, node, data):
         print("message received")

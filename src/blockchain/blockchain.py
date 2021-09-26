@@ -25,7 +25,6 @@ class Blockchain:
     main_chain = None
 
     def __init__(self, blocks: list[Block] = []):
-        self.__class__.main_node = self
 
         self.state = State()
 
@@ -35,7 +34,7 @@ class Blockchain:
         # Adding the genesis block
         self.blocks = []
         self.add_block(self.get_genesis_block(), False)
-        
+
         self.blocks += blocks
 
     def add_block(self, block: Block, validate: bool = True):
@@ -77,7 +76,8 @@ class Blockchain:
             print("The transaction is not valid", str(e))
             return False
         else:
-            self.pending.append(transaction)
+            # Saving as json to allow for checking duplicates (doesn't work with classes)
+            self.pending.append(transaction.get_json())
             return True
 
     @classmethod

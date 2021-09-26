@@ -82,6 +82,5 @@ def node():
             print(f"Balance: {wallet.balance} Nonce: {wallet.nonce}")
 
 
-
 if __name__ == "__main__":
     app()

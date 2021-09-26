@@ -1,6 +1,7 @@
 from .block import Block
 from wallet import Other_Wallet
 
+
 class State:
     def __init__(self):
         self.wallets = {}  # "address": balance
@@ -18,7 +19,7 @@ class State:
 
             # Updating the wallet nonce
             sender.nonce += 1
-        
+
     def get_wallet(self, address: str):
         if address not in self.wallets:
             # Creating a new wallet
