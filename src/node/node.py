@@ -253,15 +253,20 @@ class Node(threading.Thread):
         self.send_data_to_nodes("newtrans", data)
 
     def receive_new_transaction(self, node, data: dict):
+        chain = Blockchain.main_chain
         # Validating the new transaction against current chain
         try:
             t = Transaction.from_json(**data)
-            t.validate(Blockchain.main_chain)
         except:
             print("Invalid transaction given")
         else:
-            # Broadcasting new transaction to other nodes except the original
-            self.send_data_to_nodes("newtrans", data, node)
+            # Adding to pending transactions
+            result = chain.add_pending(t)
+
+            # If valid
+            if result:
+                # Broadcasting new transaction to other nodes except the original
+                self.send_data_to_nodes("newtrans", data, [node])
 
     def message_from_node(self, node, data):
         print("message received")

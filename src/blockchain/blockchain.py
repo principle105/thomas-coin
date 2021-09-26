@@ -69,14 +69,16 @@ class Blockchain:
     def save_locally(self):
         dump_block_data(self.blocks[1:])
 
-    def add_pending_transaction(self, transaction: Transaction):
+    def add_pending(self, transaction: Transaction):
         # Making sure the transaction is valid
         try:
             transaction.validate(self)
-        except:
-            print("The transaction is not valid")
+        except Exception as e:
+            print("The transaction is not valid", str(e))
+            return False
         else:
             self.pending.append(transaction)
+            return True
 
     @classmethod
     def from_local(cls, validate: bool = False):
@@ -110,7 +112,7 @@ class Blockchain:
         wallet = self.state.get_wallet(sender.address)
 
         t = Transaction(
-            sender.public_key, receiver, float(amount), float(tip), wallet.nonce
+            sender.public_key, receiver, float(amount), float(tip), wallet.nonce + 1
         )
         t.sign(sender)
         return t

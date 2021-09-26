@@ -62,7 +62,7 @@ def node():
 
             t = chain.create_trans(wallet, adr, amt, 0)
 
-            chain.add_pending_transaction(t)
+            chain.add_pending(t)
 
             node.send_transaction(t.get_json())
 
@@ -72,6 +72,9 @@ def node():
             node.connect_to_node(host, port)
         elif a == "ask":
             node.request_chain()
+
+        elif a == "pending":
+            print(chain.pending)
 
         elif a == "bal":
             wallet = chain.state.get_wallet(input("Address: "))

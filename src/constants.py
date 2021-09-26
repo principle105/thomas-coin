@@ -19,3 +19,5 @@ GENESIS_BLOCK_DATA = {
     "hash": "db7008a1cbd4a6d5554606b26bb024b7f94325f4581379b26d67a377f8a11202",
     "signature": "0",
 }
+MAX_BLOCK_SIZE = 50 # transactions
+MAX_TRANSACTION_SIZE = 700 # characters

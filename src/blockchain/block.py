@@ -4,7 +4,7 @@ import ecdsa
 from ecdsa.curves import SECP256k1
 from transaction import Transaction
 from wallet import Wallet
-from constants import GENESIS_BLOCK_DATA
+from constants import GENESIS_BLOCK_DATA, MAX_BLOCK_SIZE
 from hashlib import sha256
 from base64 import b64encode, b64decode
 from typing import TYPE_CHECKING
@@ -127,6 +127,10 @@ class Block:
         # Checking if signature is verified
         if self.is_signature_verified() is False:
             raise Exception("Invalid block signature")
+
+        # Checking if block does not exceed max size
+        if len(self.transactions) > MAX_BLOCK_SIZE:
+            raise Exception("Exceeds maximum block size")
 
         # Validating each traqnsaction
         for t in self.transactions:

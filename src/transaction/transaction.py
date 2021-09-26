@@ -5,6 +5,7 @@ from ecdsa.curves import SECP256k1
 from base64 import b64encode, b64decode
 from typing import TYPE_CHECKING
 from wallet import Wallet
+from constants import MAX_TRANSACTION_SIZE
 
 # To avoid circular imports
 if TYPE_CHECKING:
@@ -102,7 +103,11 @@ class Transaction:
             return False
 
     def validate(self, chain: "Blockchain"):
+        # Checking if transaction exceeds character limit
+        if len(str(self.get_json())) > MAX_TRANSACTION_SIZE:
+            raise Exception("Exceeds maximum transaction size")
 
+        # Checking if amount is valid
         if type(self.amount) not in [int, float] or self.amount < 0:
             raise Exception("Invalid amount")
 
@@ -128,8 +133,9 @@ class Transaction:
         if wallet is None or wallet.balance < self.amount:
             raise Exception("Wallet does not have enough coins for transaction")
 
-        # Checking if nonce is correct
-        if wallet.nonce < self.nonce:
+        # Checking if nonce is invalid
+        print(wallet.nonce, self.nonce)
+        if wallet.nonce >= self.nonce:
             raise Exception("Invalid nonce")
 
     @classmethod
