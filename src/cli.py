@@ -42,6 +42,9 @@ def node():
     # Starting node
     node.start()
 
+    pk = getpass.getpass(prompt="Your Private Key: ")
+    wallet = Wallet(pk)
+
     # For testing
     while True:
         chain = Blockchain.from_local()
@@ -53,12 +56,9 @@ def node():
             node.connect_to_unl_nodes()
 
         elif a == "send":
-            pk = getpass.getpass(prompt="Your Private Key: ")
-            wallet = Wallet(pk)
-
-            amt = int(input("Amount: "))
-
             adr = input("Receiver Address: ")
+            
+            amt = int(input("Amount: "))
 
             t = Transaction(wallet.public_key, adr, amt, 0)
 
@@ -74,6 +74,13 @@ def node():
             node.connect_to_node(host, port)
         elif a == "ask":
             node.request_chain()
+
+        elif a == "test":
+            chain = Blockchain.main_chain
+
+            chain.blocks = []
+
+            print(Blockchain.main_chain)
 
 
 if __name__ == "__main__":

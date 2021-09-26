@@ -5,6 +5,7 @@ import time
 import json
 from .node_connection import Node_Connection
 from blockchain import Blockchain
+from transaction import Transaction
 from config import UNL_PATH
 
 def get_unl():
@@ -245,10 +246,21 @@ class Node(threading.Thread):
         # Sending the entire blockchain minus the genesis block
         self.send_data_to_node(node, "chain", Blockchain.main_chain.get_json()[1:])
 
-    def send_transaction(self, data: dict):
+    def send_transaction(self, node, data: dict):
         print("Sending transaction")
         # Sending the transaction data to all the nodes
         self.send_data_to_nodes("newtrans", data)
+
+    def receive_new_transaction(self, node, data: dict):
+        # Validating the new transaction against current chain
+        try:
+            t = Transaction.from_json(**data)
+            t.validate(Blockchain.main_chain)
+        except:
+            print("Invalid transaction given")
+        else:
+            # Broadcasting new transaction to other nodes except the original
+            self.send_data_to_nodes("newtrans", data, node)
 
     def message_from_node(self, node, data):
         print("message received")
@@ -280,6 +292,7 @@ class Node(threading.Thread):
 
             elif data["type"] == "newtrans":
                 print("Received a new transaction froma another node")
+                self.received_new_transaction(node, data["data"])
 
             elif data["type"] == "block":
                 print("recieved a block")
