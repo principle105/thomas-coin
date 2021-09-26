@@ -16,8 +16,9 @@ class Transaction:
         self,
         sender_key: str,
         receiver: str,
-        amount: int,
-        tip: int,
+        amount: float,
+        tip: float,
+        nonce: int,
         timestamp: float = None,
         signature: str = None,
         hash: str = None,
@@ -28,8 +29,11 @@ class Transaction:
         receiver: receiver public address
         amount: coins being sent
         tip: transaction tip
+        nonce: account nonce
         timestamp: timestamp of transaction (seconds since the epoch)
         signature: proves that sender approved the transaction
+        hash: transaction hash
+        sender: sender address
         """
 
         if timestamp is None:
@@ -38,6 +42,7 @@ class Transaction:
 
         if sender is None:
             sender = Wallet.convert_to_address(sender_key)
+
         self.sender = sender
 
         self.sender_key = sender_key
@@ -48,6 +53,8 @@ class Transaction:
 
         # Higher tip gives priority
         self.tip = tip
+
+        self.nonce = nonce
 
         self.signature = signature
 
@@ -95,6 +102,9 @@ class Transaction:
 
     def validate(self, chain: "Blockchain"):
 
+        if type(self.amount) not in [int, float] or self.amount < 0:
+            raise Exception("Invalid amount")
+
         # Checking if the sender key is valid
         try:
             _ = self.sender_public_key
@@ -111,10 +121,15 @@ class Transaction:
 
         # TODO: work on fees
 
+        wallet = chain.state.get_wallet(self.sender)
+
         # Checking if the sender has enough coins to create the transaction
-        balance = chain.get_balance(self.sender)
-        if balance < self.amount:
+        if wallet is None or wallet.balance < self.amount:
             raise Exception("Wallet does not have enough coins for transaction")
+
+        # Checking if nonce is correct
+        if wallet.nonce < self.nonce:
+            raise Exception("Invalid nonce")
 
     @classmethod
     def from_json(
@@ -124,8 +139,8 @@ class Transaction:
             sender=sender,
             sender_key=sender_key,
             receiver=receiver,
-            amount=int(amount),
-            tip=int(tip),
+            amount=float(amount),
+            tip=float(tip),
             timestamp=timestamp,
             signature=signature,
             hash=hash,

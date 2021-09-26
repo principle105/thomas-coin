@@ -1,7 +1,9 @@
 import os
 import _pickle as pickle
 from .block import Block
+from wallet import Wallet
 from transaction import Transaction
+from .state import State
 from config import BLOCK_PATH
 from constants import GENESIS_BLOCK_DATA
 
@@ -27,6 +29,8 @@ class Blockchain:
 
         self.blocks = [self.get_genesis_block()] + blocks
 
+        self.state = State()
+
         # Blocks that are pending to be added to the blockchain
         self.pending: list[Block] = []
 
@@ -45,16 +49,6 @@ class Blockchain:
     def validate(self):
         for block in self.blocks:
             block.validate(self)
-
-    def get_balance(self, address: str):
-        bal = 0
-        for block in self.blocks:
-            for t in block.transactions:
-                if t.sender == address:
-                    bal -= t.amount
-                if t.receiver == address:
-                    bal += t.amount
-        return bal
 
     def get_genesis_block(self):
         return Block.from_json(**GENESIS_BLOCK_DATA)
@@ -77,7 +71,7 @@ class Blockchain:
             print("The transaction is not valid")
         else:
             self.pending.append(transaction)
-            
+
     @classmethod
     def from_local(cls, validate: bool = False):
         blocks = get_block_data()
@@ -95,7 +89,7 @@ class Blockchain:
     @classmethod
     def from_json(cls, blocks: list, validate: bool = False):
         chain = cls()
-        
+
         for b in blocks:
             block = Block.from_json(**b)
             chain.add_block(block, validate)
@@ -108,3 +102,11 @@ class Blockchain:
             print("Saving locally")
             chain.save_locally()
         cls.main_chain = chain
+
+    def create_trans(self, sender: Wallet, receiver: str, amount: float, tip: float):
+        wallet = self.state.get_wallet(sender.address)
+        t = Transaction(
+            sender.public_key, receiver, float(amount), float(tip), wallet.nonce
+        )
+        t.sign(wallet)
+        return t

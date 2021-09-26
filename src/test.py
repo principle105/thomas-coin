@@ -12,38 +12,17 @@ from os import getenv
 import time
 
 if __name__ == "__main__":
-    owner = Wallet(getenv("OWNER_PRIVATE_KEY"))
+    t = Transaction(
+        sender_key="GENESIS",
+        receiver="T6a0459220225c6b4bfaef26ec87844a072afc29a",
+        amount=10000.0,
+        tip=0.0,
+        nonce=0,
+        sender="GENESIS",
+    )
+    t.signature = "0"
 
-    other = Wallet("1ef98e260c70ae196079655392461226c42778b8373ba9780e497272e47d53dc")
+    b = Block(index=0, prev="0", forger="0", transactions=[t])
+    b.signature = "0"
 
-    chain = Blockchain()
-
-    print(chain.blocks)
-
-    for _ in range(20):
-        # sending coins
-        b = Block(len(chain.blocks), chain.blocks[-1].hash)
-        if len(chain.blocks) == 1:
-
-            t = Transaction(owner.public_key, other.address, 1, 0)
-
-            t.sign(owner)
-
-            b.append_transaction(t)
-
-        b.sign(owner)
-
-        chain.add_block(b)
-
-    print("OWNER", chain.get_balance(owner.address))
-    print("OTHER", chain.get_balance(other.address))
-
-    a = time.time()
-    chain.save_locally()
-
-    print("TO SAVE", time.time() - a)
-    a = time.time()
-
-    newchain = Blockchain.from_local()
-
-    print("TO RELOAD", time.time() - a)
+    print(b.get_json())

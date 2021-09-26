@@ -8,9 +8,11 @@ from blockchain import Blockchain
 from transaction import Transaction
 from config import UNL_PATH
 
+
 def get_unl():
     with open(UNL_PATH, "r") as f:
         return json.load(f)
+
 
 def get_connected_unl():
     unl = get_unl()
@@ -29,6 +31,7 @@ def get_connected_unl():
 def node_is_unl(host, port):
     return {"host": host, "port": port} in get_unl()
 
+
 def compare_chains(other_chain: Blockchain, our_chain: Blockchain):
     other_chain, our_chain = other_chain.blocks, our_chain.blocks
     """
@@ -37,8 +40,9 @@ def compare_chains(other_chain: Blockchain, our_chain: Blockchain):
     for i in range(len(our_chain)):
         if other_chain[i] != our_chain[i]:
             return False
-            
+
     return True
+
 
 # Based on https://github.com/macsnoeren/python-p2p-network
 class Node(threading.Thread):
@@ -121,10 +125,7 @@ class Node(threading.Thread):
 
     def send_data_to_node(self, n, msg_type: str, msg_data):
 
-        data = {
-            "type": msg_type,
-            "data": msg_data
-        }
+        data = {"type": msg_type, "data": msg_data}
 
         self.message_count_send = self.message_count_send + 1
         self.delete_closed_connections()
@@ -300,6 +301,6 @@ class Node(threading.Thread):
 
             else:
                 print(node, data)
-        
+
         except Exception as e:
             print(str(e))

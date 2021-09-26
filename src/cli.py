@@ -57,12 +57,10 @@ def node():
 
         elif a == "send":
             adr = input("Receiver Address: ")
-            
-            amt = int(input("Amount: "))
 
-            t = Transaction(wallet.public_key, adr, amt, 0)
+            amt = float(input("Amount: "))
 
-            t.sign(wallet)
+            t = chain.create_trans(wallet, adr, amt, 0)
 
             chain.add_pending_transaction(t)
 
