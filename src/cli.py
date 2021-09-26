@@ -73,12 +73,11 @@ def node():
         elif a == "ask":
             node.request_chain()
 
-        elif a == "test":
-            chain = Blockchain.main_chain
+        elif a == "bal":
+            wallet = chain.state.get_wallet(input("Address: "))
+            print(chain.state.wallets)
+            print(f"Balance: {wallet.balance} Nonce: {wallet.nonce}")
 
-            chain.blocks = []
-
-            print(Blockchain.main_chain)
 
 
 if __name__ == "__main__":

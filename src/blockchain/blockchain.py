@@ -27,12 +27,16 @@ class Blockchain:
     def __init__(self, blocks: list[Block] = []):
         self.__class__.main_node = self
 
-        self.blocks = [self.get_genesis_block()] + blocks
-
         self.state = State()
 
         # Blocks that are pending to be added to the blockchain
         self.pending: list[Block] = []
+
+        # Adding the genesis block
+        self.blocks = []
+        self.add_block(self.get_genesis_block(), False)
+        
+        self.blocks += blocks
 
     def add_block(self, block: Block, validate: bool = True):
         # Removing the block transactions from pending
@@ -43,6 +47,8 @@ class Blockchain:
         if validate:
             # Checking if the block is valid
             block.validate(self)
+
+        self.state.add_block(block)
 
         self.blocks.append(block)
 
@@ -78,11 +84,8 @@ class Blockchain:
         chain = cls()
 
         if blocks:
-            if validate:
-                for b in blocks:
-                    chain.add_block(b)
-            else:
-                chain.blocks = chain.blocks + blocks
+            for b in blocks:
+                chain.add_block(b, validate)
 
         return chain
 
@@ -105,8 +108,9 @@ class Blockchain:
 
     def create_trans(self, sender: Wallet, receiver: str, amount: float, tip: float):
         wallet = self.state.get_wallet(sender.address)
+
         t = Transaction(
             sender.public_key, receiver, float(amount), float(tip), wallet.nonce
         )
-        t.sign(wallet)
+        t.sign(sender)
         return t

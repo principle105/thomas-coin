@@ -75,6 +75,7 @@ class Transaction:
             "receiver": self.receiver,
             "amount": self.amount,
             "tip": 0,
+            "nonce": self.nonce,
             "signature": self.signature,
             "timestamp": self.timestamp,
             "hash": self.hash,
@@ -121,7 +122,7 @@ class Transaction:
 
         # TODO: work on fees
 
-        wallet = chain.state.get_wallet(self.sender)
+        wallet = chain.state.wallets.get(self.sender, None)
 
         # Checking if the sender has enough coins to create the transaction
         if wallet is None or wallet.balance < self.amount:
@@ -133,7 +134,16 @@ class Transaction:
 
     @classmethod
     def from_json(
-        cls, sender, sender_key, receiver, amount, tip, timestamp, signature, hash
+        cls,
+        sender,
+        sender_key,
+        receiver,
+        amount,
+        tip,
+        nonce,
+        timestamp,
+        signature,
+        hash,
     ):
         return cls(
             sender=sender,
@@ -141,6 +151,7 @@ class Transaction:
             receiver=receiver,
             amount=float(amount),
             tip=float(tip),
+            nonce=nonce,
             timestamp=timestamp,
             signature=signature,
             hash=hash,

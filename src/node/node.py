@@ -247,7 +247,7 @@ class Node(threading.Thread):
         # Sending the entire blockchain minus the genesis block
         self.send_data_to_node(node, "chain", Blockchain.main_chain.get_json()[1:])
 
-    def send_transaction(self, node, data: dict):
+    def send_transaction(self, data: dict):
         print("Sending transaction")
         # Sending the transaction data to all the nodes
         self.send_data_to_nodes("newtrans", data)
@@ -265,42 +265,37 @@ class Node(threading.Thread):
 
     def message_from_node(self, node, data):
         print("message received")
-        try:
+        if list(data.keys()) != ["type", "data"]:
+            print("Incorrect fields")
+            return
 
-            if list(data.keys()) != ["type", "data"]:
-                print("Incorrect fields")
-                return
-
-            # TODO: check if unl
-            if data["type"] == "chain":
-                print("Received a chain")
-                try:
-                    chain = Blockchain.from_json(data["data"], validate=True)
-                except Exception as e:
-                    print("Invalid chain data", str(e))
-                else:
-                    # Checking if chain is more recent
-                    if len(Blockchain.main_chain.blocks) > len(chain.blocks):
-                        if compare_chains(Blockchain.main_chain, chain.blocks):
-                            print("setting new main chain")
-                            Blockchain.set_main(chain)
-                        else:
-                            print("Invalid chain")
-
-            elif data["type"] == "sendchain":
-                print("Sending chain")
-                self.send_chain(node)
-
-            elif data["type"] == "newtrans":
-                print("Received a new transaction froma another node")
-                self.received_new_transaction(node, data["data"])
-
-            elif data["type"] == "block":
-                print("recieved a block")
-                pass
-
+        # TODO: check if unl
+        if data["type"] == "chain":
+            print("Received a chain")
+            try:
+                chain = Blockchain.from_json(data["data"], validate=True)
+            except Exception as e:
+                print("Invalid chain data", str(e))
             else:
-                print(node, data)
+                # Checking if chain is more recent
+                if len(Blockchain.main_chain.blocks) > len(chain.blocks):
+                    if compare_chains(Blockchain.main_chain, chain.blocks):
+                        print("setting new main chain")
+                        Blockchain.set_main(chain)
+                    else:
+                        print("Invalid chain")
 
-        except Exception as e:
-            print(str(e))
+        elif data["type"] == "sendchain":
+            print("Sending chain")
+            self.send_chain(node)
+
+        elif data["type"] == "newtrans":
+            print("Received a new transaction froma another node")
+            self.receive_new_transaction(node, data["data"])
+
+        elif data["type"] == "block":
+            print("recieved a block")
+            pass
+
+        else:
+            print(node, data)
