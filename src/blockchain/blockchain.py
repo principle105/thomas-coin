@@ -1,8 +1,8 @@
 import os
 import _pickle as pickle
-from .block import Block
 from wallet import Wallet
 from .transaction import Transaction
+from .block import Block
 from config import BLOCK_PATH
 from constants import GENESIS_BLOCK_DATA
 from .state import State
@@ -23,7 +23,9 @@ def dump_block_data(data: list):
 class Blockchain:
     main_chain = None
 
-    def __init__(self, blocks: list[Block] = []):
+    def __init__(self, pruned: bool = False):
+
+        self.pruned = pruned
 
         self.state = State()
 
@@ -34,8 +36,6 @@ class Blockchain:
         self.blocks = []
         self.add_block(self.get_genesis_block(), False)
 
-        self.blocks += blocks
-
     def add_block(self, block: Block, validate: bool = True):
         # Removing the block transactions from pending
         for t in block.transactions:
@@ -44,11 +44,14 @@ class Blockchain:
 
         if validate:
             # Checking if the block is valid
-            block.validate(self)
+            block.validate(self.state)
 
         self.state.add_block(block)
 
-        self.blocks.append(block)
+        if self.pruned:
+            self.blocks = [block]
+        else:
+            self.blocks.append(block)
 
         # Saving the blockchain locally
         self.save_locally()
@@ -73,7 +76,7 @@ class Blockchain:
     def add_pending(self, transaction: Transaction):
         # Making sure the transaction is valid
         try:
-            transaction.validate(self)
+            transaction.validate(self.state)
         except Exception as e:
             print("The transaction is not valid", str(e))
             return False

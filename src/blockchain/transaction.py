@@ -4,8 +4,12 @@ from hashlib import sha256
 from ecdsa.curves import SECP256k1
 from base64 import b64encode, b64decode
 from wallet import Wallet
-from .state import State
 from constants import MAX_TRANSACTION_SIZE
+from typing import TYPE_CHECKING
+
+# To avoid circular imports
+if TYPE_CHECKING:
+    from .state import State
 
 
 class Transaction:
@@ -98,7 +102,7 @@ class Transaction:
         except ecdsa.BadSignatureError:
             return False
 
-    def validate(self, chain_state: State):
+    def validate(self, chain_state: "State"):
         # Checking if transaction exceeds character limit
         if len(str(self.get_json())) > MAX_TRANSACTION_SIZE:
             raise Exception("Exceeds maximum transaction size")

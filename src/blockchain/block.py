@@ -7,11 +7,11 @@ from constants import GENESIS_BLOCK_DATA, MAX_BLOCK_SIZE
 from hashlib import sha256
 from base64 import b64encode, b64decode
 from typing import TYPE_CHECKING
+from .transaction import Transaction
 
 # To avoid circular imports
 if TYPE_CHECKING:
     from .state import State
-    from .transaction import Transaction
 
 
 class Block:
@@ -21,7 +21,7 @@ class Block:
         prev: str,
         forger: str = None,
         timestamp: float = None,
-        transactions: list["Transaction"] = [],
+        transactions: list[Transaction] = [],
         signature: str = None,
         hash: str = None,
     ):
@@ -70,7 +70,7 @@ class Block:
             "signature": self.signature,
         }
 
-    def append_transaction(self, transaction: "Transaction"):
+    def append_transaction(self, transaction: Transaction):
         self.transactions.append(transaction)
 
     @property

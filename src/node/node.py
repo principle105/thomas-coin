@@ -16,11 +16,8 @@ def get_unl():
 def get_connected_unl():
     unl = get_unl()
 
-    print(unl)
-
     nodes = []
     for node in Node.main_node.nodes_inbound + Node.main_node.nodes_outbound:
-        print({"host": node.host, "port": node.port})
         if {"host": node.host, "port": node.port} in unl:
             nodes.append(node)
 
@@ -170,9 +167,8 @@ class Node(threading.Thread):
 
             self.nodes_outbound.append(thread_client)
 
-        except Exception as e:
-            print(str(e))
-            print("Could not connect with node")
+        except:
+            pass
 
     def create_the_new_connection(self, connection, id, host, port):
         return Node_Connection(self, connection, id, host, port)
@@ -301,11 +297,15 @@ class Node(threading.Thread):
                         print("Invalid chain")
 
         elif data["type"] == "sendchain":
+            # Checking if node is pruned
+            if Blockchain.main_chain.pruned:
+                return
+
             print("Sending chain")
             self.send_chain(node)
 
         elif data["type"] == "newtrans":
-            print("Received a new transaction froma another node")
+            print("Received a new transaction from another node")
             self.receive_new_transaction(node, data["data"])
 
         elif data["type"] == "block":
