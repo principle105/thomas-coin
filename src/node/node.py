@@ -44,7 +44,7 @@ def compare_chains(other_chain: Blockchain, our_chain: Blockchain):
 class Node(threading.Thread):
     main_node = None
 
-    def __init__(self, host: str, port: int):
+    def __init__(self, host: str, port: int, max_connections: int = 0):
 
         self.__class__.main_node = self
 
@@ -62,6 +62,9 @@ class Node(threading.Thread):
         self.nodes_outbound = []
 
         self.id = self.generate_id()
+
+        # Max number of connections
+        self.max_connections = max_connections
 
         # Start the TCP/IP server
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -186,31 +189,35 @@ class Node(threading.Thread):
     def run(self):
 
         while not self.terminate_flag.is_set():
-            # Accepting incoming connections
-            try:
-                connection, client_address = self.sock.accept()
+            # Checking if node has reached max number of connections
+            if (
+                self.max_connections == 0
+                or len(self.nodes_inbound) < self.max_connections
+            ):
+                # Accepting incoming connections
+                try:
+                    connection, client_address = self.sock.accept()
 
-                connected_node_id = connection.recv(4096).decode("utf-8")
-                connection.send(self.id.encode("utf-8"))
+                    connected_node_id = connection.recv(4096).decode("utf-8")
+                    connection.send(self.id.encode("utf-8"))
 
-                thread_client = self.create_the_new_connection(
-                    connection,
-                    connected_node_id,
-                    client_address[0],
-                    client_address[1],
-                )
-                thread_client.start()
+                    thread_client = self.create_the_new_connection(
+                        connection,
+                        connected_node_id,
+                        client_address[0],
+                        client_address[1],
+                    )
+                    thread_client.start()
 
-                self.nodes_inbound.append(thread_client)
+                    self.nodes_inbound.append(thread_client)
 
-            except socket.timeout:
-                pass
+                except socket.timeout:
+                    pass
 
-            except Exception as e:
-                raise e
+                except Exception as e:
+                    raise e
 
-            time.sleep(0.01)
-
+                time.sleep(0.01)
         print("Node stopping")
 
         for t in self.nodes_inbound:

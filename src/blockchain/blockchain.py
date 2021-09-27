@@ -7,6 +7,7 @@ from config import BLOCK_PATH
 from constants import GENESIS_BLOCK_DATA
 from .state import State
 
+
 def get_block_data():
     if not os.path.exists(BLOCK_PATH):
         return False

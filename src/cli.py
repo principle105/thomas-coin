@@ -27,13 +27,7 @@ def node():
     port = int(input("Port: ") or 3000)
 
     # Creating blockchain
-    fraud = bool(input("FRAUD: "))
-    if fraud:
-        chain = Blockchain()
-        for i in range(3):
-            chain.blocks.append(Block(i, "0"))
-    else:
-        chain = Blockchain.from_local()
+    chain = Blockchain.from_local()
 
     # Initializing node
     node = Node(host, port)
@@ -61,9 +55,8 @@ def node():
 
             t = chain.create_trans(wallet, adr, amt, 0)
 
-            chain.add_pending(t)
-
-            node.send_transaction(t.get_json())
+            if chain.add_pending(t):
+                node.send_transaction(t.get_json())
 
         elif a == "connect-single":
             host = input("Host: ") or "127.0.0.1"
