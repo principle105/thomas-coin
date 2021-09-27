@@ -2,7 +2,6 @@ import time
 import json
 import ecdsa
 from ecdsa.curves import SECP256k1
-from transaction import Transaction
 from wallet import Wallet
 from constants import GENESIS_BLOCK_DATA, MAX_BLOCK_SIZE
 from hashlib import sha256
@@ -11,7 +10,8 @@ from typing import TYPE_CHECKING
 
 # To avoid circular imports
 if TYPE_CHECKING:
-    from blockchain import Blockchain
+    from .state import State
+    from .transaction import Transaction
 
 
 class Block:
@@ -21,7 +21,7 @@ class Block:
         prev: str,
         forger: str = None,
         timestamp: float = None,
-        transactions: list[Transaction] = [],
+        transactions: list["Transaction"] = [],
         signature: str = None,
         hash: str = None,
     ):
@@ -70,7 +70,7 @@ class Block:
             "signature": self.signature,
         }
 
-    def append_transaction(self, transaction: Transaction):
+    def append_transaction(self, transaction: "Transaction"):
         self.transactions.append(transaction)
 
     @property
@@ -91,7 +91,7 @@ class Block:
         self.forger = forger.public_key
         self.signature = b64encode(forger.sk.sign(self.hash.encode())).decode()
 
-    def validate(self, chain: "Blockchain"):
+    def validate(self, chain_state: "State"):
         """
         chain: blockchain object
         """
@@ -104,12 +104,11 @@ class Block:
         if self.forger is None:
             raise Exception("Block does not have a forger")
 
-        chain_length = len(chain.blocks)
-        if chain_length == 0:
+        if chain_state.length == 0:
             raise Exception("Chain is empty")
 
         # Checking if the block is the genesis block
-        if self.index == chain_length - 1 == 0:
+        if self.index == chain_state.length - 1 == 0:
             # Checking if the genesis block is valid
             if self.get_json() != GENESIS_BLOCK_DATA:
                 raise Exception("Genesis block is not valid")
@@ -117,11 +116,11 @@ class Block:
             return
 
         # Checking if the block comes after the last block in the chain
-        if self.index != chain_length:
-            raise Exception(f"Incorrect block index {self.index} {chain_length}")
+        if self.index != chain_state.length:
+            raise Exception(f"Incorrect block index {self.index} {chain_state.length}")
 
         # Checking the previous hash
-        if self.prev != chain.blocks[-1].hash:
+        if self.prev != chain_state.last_block:
             raise Exception("Previous hash does not match")
 
         # Checking if signature is verified
@@ -134,7 +133,7 @@ class Block:
 
         # Validating each traqnsaction
         for t in self.transactions:
-            t.validate(chain)
+            t.validate(chain_state)
 
     @classmethod
     def from_json(

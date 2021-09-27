@@ -3,8 +3,7 @@ import getpass
 from typer.colors import BRIGHT_YELLOW, BRIGHT_BLUE
 from wallet import Wallet
 from node import Node
-from blockchain import Blockchain, Block
-from transaction import Transaction
+from blockchain import Blockchain, Block, Transaction
 
 app = typer.Typer()
 

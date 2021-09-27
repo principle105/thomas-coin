@@ -4,8 +4,7 @@ import socket
 import time
 import json
 from .node_connection import Node_Connection
-from blockchain import Blockchain
-from transaction import Transaction
+from blockchain import Blockchain, Transaction
 from config import UNL_PATH
 
 

@@ -3,13 +3,9 @@ import time
 from hashlib import sha256
 from ecdsa.curves import SECP256k1
 from base64 import b64encode, b64decode
-from typing import TYPE_CHECKING
 from wallet import Wallet
+from .state import State
 from constants import MAX_TRANSACTION_SIZE
-
-# To avoid circular imports
-if TYPE_CHECKING:
-    from blockchain import Blockchain
 
 
 class Transaction:
@@ -102,7 +98,7 @@ class Transaction:
         except ecdsa.BadSignatureError:
             return False
 
-    def validate(self, chain: "Blockchain"):
+    def validate(self, chain_state: State):
         # Checking if transaction exceeds character limit
         if len(str(self.get_json())) > MAX_TRANSACTION_SIZE:
             raise Exception("Exceeds maximum transaction size")
@@ -128,7 +124,7 @@ class Transaction:
         # TODO: work on fees
 
         # Using get instead of get_wallet method to prevent from creating new wallet in storage
-        wallet = chain.state.wallets.get(self.sender, None)
+        wallet = chain_state.wallets.get(self.sender, None)
 
         # Checking if the sender has enough coins to create the transaction
         if wallet is None or wallet.balance < self.amount:

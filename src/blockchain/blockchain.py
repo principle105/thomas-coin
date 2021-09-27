@@ -2,11 +2,10 @@ import os
 import _pickle as pickle
 from .block import Block
 from wallet import Wallet
-from transaction import Transaction
-from .state import State
+from .transaction import Transaction
 from config import BLOCK_PATH
 from constants import GENESIS_BLOCK_DATA
-
+from .state import State
 
 def get_block_data():
     if not os.path.exists(BLOCK_PATH):
@@ -51,9 +50,12 @@ class Blockchain:
 
         self.blocks.append(block)
 
+        # Saving the blockchain locally
+        self.save_locally()
+
     def validate(self):
         for block in self.blocks:
-            block.validate(self)
+            block.validate(self.state)
 
     def get_genesis_block(self):
         return Block.from_json(**GENESIS_BLOCK_DATA)

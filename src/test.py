@@ -5,9 +5,8 @@ try:
 except ImportError:
     pass
 
-from blockchain import Blockchain, Block
+from blockchain import Blockchain, Block, Transaction
 from wallet import Wallet
-from transaction import Transaction
 from os import getenv
 import time
 
