@@ -1,11 +1,16 @@
 import typer
 import getpass
+import requests
 from typer.colors import BRIGHT_YELLOW, BRIGHT_BLUE
 from wallet import Wallet
 from node import Node
-from blockchain import Blockchain, Block, Transaction
+from blockchain import Blockchain
 
 app = typer.Typer()
+
+
+def get_public_ip():
+    return requests.get("https://api.ipify.org").text
 
 
 @app.command()
@@ -30,7 +35,7 @@ def node():
     chain = Blockchain.from_local()
 
     # Initializing node
-    node = Node(host, port)
+    node = Node(host, port, 1)
 
     # Starting node
     node.start()

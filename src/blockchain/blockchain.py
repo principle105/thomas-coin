@@ -37,7 +37,7 @@ class Blockchain:
         self.blocks = []
         self.add_block(self.get_genesis_block(), False)
 
-    def add_block(self, block: Block, validate: bool = True):
+    def add_block(self, block: Block, validate: bool = True, save: bool = True):
         # Removing the block transactions from pending
         for t in block.transactions:
             if t in self.pending:
@@ -54,8 +54,9 @@ class Blockchain:
         else:
             self.blocks.append(block)
 
-        # Saving the blockchain locally
-        self.save_locally()
+        if save:
+            # Saving the blockchain locally
+            self.save_locally()
 
     def validate(self):
         for block in self.blocks:
@@ -87,13 +88,13 @@ class Blockchain:
             return True
 
     @classmethod
-    def from_local(cls, validate: bool = False):
+    def from_local(cls):
         blocks = get_block_data()
         chain = cls()
 
         if blocks:
             for b in blocks:
-                chain.add_block(b, validate)
+                chain.add_block(b, save=False)
 
         return chain
 

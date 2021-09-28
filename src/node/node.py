@@ -163,7 +163,7 @@ class Node(threading.Thread):
             sock.send(self.id.encode("utf-8"))
             connected_node_id = sock.recv(4096).decode("utf-8")
 
-            thread_client = self.create_the_new_connection(
+            thread_client = self.create_a_new_connection(
                 sock, connected_node_id, host, port
             )
             thread_client.start()
@@ -173,35 +173,26 @@ class Node(threading.Thread):
         except:
             pass
 
-    def create_the_new_connection(self, connection, id, host, port):
+    def create_a_new_connection(self, connection, id, host, port):
         return Node_Connection(self, connection, id, host, port)
-
-    def disconnect_to_node(self, node):
-
-        if node in self.nodes_outbound:
-            node.stop()
-            node.join()
-            del self.nodes_outbound[self.nodes_outbound.index(node)]
-
-        else:
-            print("Not connected with node")
 
     def run(self):
 
         while not self.terminate_flag.is_set():
-            # Checking if node has reached max number of connections
-            if (
-                self.max_connections == 0
-                or len(self.nodes_inbound) < self.max_connections
-            ):
-                # Accepting incoming connections
-                try:
-                    connection, client_address = self.sock.accept()
+            # Accepting incoming connections
+            try:
+                connection, client_address = self.sock.accept()
+
+                # Disconnecting if maxiumum connections is reachd
+                if (
+                    self.max_connections == 0
+                    or len(self.nodes_inbound) < self.max_connections
+                ):
 
                     connected_node_id = connection.recv(4096).decode("utf-8")
                     connection.send(self.id.encode("utf-8"))
 
-                    thread_client = self.create_the_new_connection(
+                    thread_client = self.create_a_new_connection(
                         connection,
                         connected_node_id,
                         client_address[0],
@@ -210,14 +201,15 @@ class Node(threading.Thread):
                     thread_client.start()
 
                     self.nodes_inbound.append(thread_client)
+                else:
+                    connection.close()
+            except socket.timeout:
+                pass
 
-                except socket.timeout:
-                    pass
+            except Exception as e:
+                raise e
 
-                except Exception as e:
-                    raise e
-
-                time.sleep(0.01)
+            time.sleep(0.01)
         print("Node stopping")
 
         for t in self.nodes_inbound:

@@ -5,15 +5,14 @@ try:
 except ImportError:
     pass
 
-from blockchain import Blockchain, Block, Transaction
-from wallet import Wallet
+from blockchain import Block, Transaction
 from os import getenv
 import time
 
 if __name__ == "__main__":
     t = Transaction(
         sender_key="GENESIS",
-        receiver="T6a0459220225c6b4bfaef26ec87844a072afc29a",
+        receiver="Te32761fe9b7b617f327c5b428bd29d8b5b4d7929",
         amount=10000.0,
         tip=0.0,
         nonce=0,
