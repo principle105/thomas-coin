@@ -109,7 +109,11 @@ class Transaction:
 
         # Checking if amount is valid
         if type(self.amount) not in [int, float] or self.amount < 0:
-            raise Exception("Invalid amount")
+            raise Exception("Invalid transaction amount")
+
+        # Checking if amount is valid
+        if type(self.tip) not in [int, float] or self.tip < 0:
+            raise Exception("Invalid fee amount")
 
         # Checking if the sender key is valid
         try:
