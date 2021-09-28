@@ -35,7 +35,7 @@ def node():
     chain = Blockchain.from_local()
 
     # Initializing node
-    node = Node(host, port, 1)
+    node = Node(host=host, port=port, chain=chain, max_connections=30)
 
     # Starting node
     node.start()
@@ -45,9 +45,6 @@ def node():
 
     # For testing
     while True:
-        chain = Blockchain.from_local()
-
-        chain.set_main(chain, False)
 
         a = input("What do: ") or "connect"
         if a == "connect":

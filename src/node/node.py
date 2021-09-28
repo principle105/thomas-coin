@@ -44,7 +44,9 @@ def compare_chains(other_chain: Blockchain, our_chain: Blockchain):
 class Node(threading.Thread):
     main_node = None
 
-    def __init__(self, host: str, port: int, max_connections: int = 0):
+    def __init__(
+        self, host: str, port: int, chain: Blockchain, max_connections: int = 0
+    ):
 
         self.__class__.main_node = self
 
@@ -54,6 +56,9 @@ class Node(threading.Thread):
 
         self.host = host
         self.port = port
+
+        # Main blockchain
+        self.chain = chain
 
         # If the other node initiated the connection
         self.nodes_inbound = []
@@ -239,7 +244,7 @@ class Node(threading.Thread):
 
     def send_chain(self, node):
         # Sending the entire blockchain minus the genesis block
-        self.send_data_to_node(node, "chain", Blockchain.main_chain.get_json()[1:])
+        self.send_data_to_node(node, "chain", Node.main_node.chain.get_json()[1:])
 
     def send_transaction(self, data: dict):
         print("Sending transaction")
@@ -247,7 +252,7 @@ class Node(threading.Thread):
         self.send_data_to_nodes("newtrans", data)
 
     def receive_new_transaction(self, node, data: dict):
-        chain = Blockchain.main_chain
+        chain = Node.main_node.chain
         # Validating the new transaction against current chain
         try:
             t = Transaction.from_json(**data)
@@ -274,7 +279,8 @@ class Node(threading.Thread):
                     self.send_data_to_nodes("newtrans", data, [node])
 
     def message_from_node(self, node, data):
-        print("message received")
+        main_chain = Node.main_node.chain
+
         if list(data.keys()) != ["type", "data"]:
             print("Incorrect fields")
             return
@@ -288,16 +294,17 @@ class Node(threading.Thread):
                 print("Invalid chain data", str(e))
             else:
                 # Checking if chain is more recent
-                if len(Blockchain.main_chain.blocks) > len(chain.blocks):
-                    if compare_chains(Blockchain.main_chain, chain.blocks):
+                if len(main_chain.blocks) > len(chain.blocks):
+                    if compare_chains(main_chain, chain.blocks):
                         print("setting new main chain")
-                        Blockchain.set_main(chain)
+                        main_chain = chain
+                        chain.save_locally()
                     else:
                         print("Invalid chain")
 
         elif data["type"] == "sendchain":
             # Checking if node is pruned
-            if Blockchain.main_chain.pruned:
+            if main_chain.pruned:
                 return
 
             print("Sending chain")

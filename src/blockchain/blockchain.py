@@ -22,8 +22,6 @@ def dump_block_data(data: list):
 
 
 class Blockchain:
-    main_chain = None
-
     def __init__(self, pruned: bool = False):
 
         self.pruned = pruned
@@ -107,13 +105,6 @@ class Blockchain:
             chain.add_block(block, validate)
 
         return chain
-
-    @classmethod
-    def set_main(cls, chain, save: bool = True):
-        if save:
-            print("Saving locally")
-            chain.save_locally()
-        cls.main_chain = chain
 
     def create_trans(self, sender: Wallet, receiver: str, amount: float, tip: float):
         wallet = self.state.get_wallet(sender.address)

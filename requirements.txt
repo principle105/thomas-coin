@@ -1,4 +1,5 @@
 ecdsa==0.17.0
 colorama==0.4.4
 typer==0.4.0
+requests==2.26.0
 black
