@@ -112,7 +112,7 @@ class Blockchain:
 
         return chain
 
-    def create_trans(self, sender: Wallet, receiver: str, amount: float, fee: float):
+    def create_trans(self, sender: Wallet, receiver: str, amount: float, tip: float):
         wallet = self.state.get_wallet(sender.address)
 
         # Nonce increment for pending transactions
@@ -122,7 +122,7 @@ class Blockchain:
             sender.public_key,
             receiver,
             float(amount),
-            float(fee),
+            float(tip),
             wallet.nonce + extra + 1,
         )
         t.sign(sender)
@@ -140,3 +140,5 @@ class Blockchain:
                 bal -= p["amount"]
 
         return bal
+
+

@@ -14,7 +14,7 @@ if __name__ == "__main__":
         sender_key="GENESIS",
         receiver="Te32761fe9b7b617f327c5b428bd29d8b5b4d7929",
         amount=10000.0,
-        fee=0.0,
+        tip=0.0,
         nonce=0,
         sender="GENESIS",
     )

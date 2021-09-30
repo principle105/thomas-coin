@@ -4,7 +4,7 @@ from hashlib import sha256
 from ecdsa.curves import SECP256k1
 from base64 import b64encode, b64decode
 from wallet import Wallet
-from constants import MAX_TRANSACTION_SIZE
+from constants import MAX_TRANSACTION_SIZE, FIRST_FEE
 from typing import TYPE_CHECKING
 
 # To avoid circular imports
@@ -18,7 +18,7 @@ class Transaction:
         sender_key: str,
         receiver: str,
         amount: float,
-        fee: float,
+        tip: float,
         nonce: int,
         timestamp: float = None,
         signature: str = None,
@@ -29,7 +29,7 @@ class Transaction:
         sender_key: sender public key
         receiver: receiver public address
         amount: coins being sent
-        fee: transaction fee
+        tip: transaction tip
         nonce: account nonce
         timestamp: timestamp of transaction (seconds since the epoch)
         signature: proves that sender approved the transaction
@@ -52,8 +52,8 @@ class Transaction:
 
         self.amount = amount
 
-        # Higher fee gives priority
-        self.fee = fee
+        # Higher tip gives priority
+        self.tip = tip
 
         self.nonce = nonce
 
@@ -63,6 +63,9 @@ class Transaction:
             hash = self.get_hash()
 
         self.hash = hash
+
+    def calculate_fee(self):
+
 
     @property
     def sender_public_key(self):
@@ -75,7 +78,7 @@ class Transaction:
             "sender_key": self.sender_key,
             "receiver": self.receiver,
             "amount": self.amount,
-            "fee": 0,
+            "tip": 0,
             "nonce": self.nonce,
             "signature": self.signature,
             "timestamp": self.timestamp,
@@ -84,7 +87,7 @@ class Transaction:
         return data
 
     def get_raw_transaction_string(self):
-        return f"{self.sender}{self.receiver}{self.amount}{self.timestamp}{self.nonce}"
+        return f"{self.sender}{self.receiver}{self.tip}{self.fee}{self.amount}{self.timestamp}{self.nonce}"
 
     def get_hash(self) -> str:
         data = self.get_raw_transaction_string().encode()
@@ -112,8 +115,8 @@ class Transaction:
             raise Exception("Invalid transaction amount")
 
         # Checking if amount is valid
-        if type(self.fee) not in [int, float] or self.fee < 0:
-            raise Exception("Invalid fee amount")
+        if type(self.tip) not in [int, float] or self.tip < 0:
+            raise Exception("Invalid tip amount")
 
         # Checking if the sender key is valid
         try:
@@ -129,7 +132,7 @@ class Transaction:
         if self.is_signature_valid() is False:
             raise Exception("Invalid signature")
 
-        # TODO: work on fees
+        # TODO: work on tips
 
         # Using get instead of get_wallet method to prevent from creating new wallet in storage
         wallet = chain_state.wallets.get(self.sender, None)
@@ -149,7 +152,7 @@ class Transaction:
         sender_key,
         receiver,
         amount,
-        fee,
+        tip,
         nonce,
         timestamp,
         signature,
@@ -160,7 +163,7 @@ class Transaction:
             sender_key=sender_key,
             receiver=receiver,
             amount=float(amount),
-            fee=float(fee),
+            tip=float(tip),
             nonce=nonce,
             timestamp=timestamp,
             signature=signature,

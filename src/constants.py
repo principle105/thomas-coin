@@ -9,7 +9,7 @@ GENESIS_BLOCK_DATA = {
             "sender_key": "GENESIS",
             "receiver": "Te32761fe9b7b617f327c5b428bd29d8b5b4d7929",
             "amount": 10000.0,
-            "fee": 0,
+            "tip": 0,
             "nonce": 0,
             "signature": "0",
             "timestamp": 1632890813.8103418,
@@ -21,3 +21,7 @@ GENESIS_BLOCK_DATA = {
 }
 MAX_BLOCK_SIZE = 50  # transactions
 MAX_TRANSACTION_SIZE = 700  # characters
+MAX_COINS = 100000 # the maximum amount of coins issued (not including genesis)
+
+# Interval of blocks until coins issued per block is changed
+ISSUE_CHANGE_INTERVAL = 10000
