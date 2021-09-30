@@ -18,10 +18,7 @@ class State:
 
             # Updating the wallet balance
             sender.balance -= t.amount
-            receiver.balance += t.amount
-
-            # Updating the wallet nonce
-            sender.nonce += 1
+            receiver.balance += t.amount + t.fee
 
     def get_wallet(self, address: str):
         if address not in self.wallets:

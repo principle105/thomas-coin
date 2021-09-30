@@ -4,7 +4,7 @@ import socket
 import time
 import json
 from .node_connection import Node_Connection
-from blockchain import Blockchain, Transaction
+from blockchain import Blockchain, Transaction, Block
 from config import UNL_PATH
 
 
@@ -316,6 +316,19 @@ class Node(threading.Thread):
 
         elif data["type"] == "block":
             print("recieved a block")
+
+            try:
+                block = Block.from_json(**data["data"])
+
+                main_chain.add_block(block)
+
+            except Exception as e:
+                print("block invalid", str(e))
+
+        elif data["type"] == "sendpending":
+            pass
+
+        elif data["type"] == "pending":
             pass
 
         else:

@@ -26,6 +26,7 @@ class Blockchain:
 
         self.pruned = pruned
 
+        # Keeps track of various stats
         self.state = State()
 
         # Blocks that are pending to be added to the blockchain
@@ -81,8 +82,13 @@ class Blockchain:
             print("The transaction is not valid", str(e))
             return False
         else:
+            # Incrementing the nonce
+            wallet = self.state.get_wallet(transaction.sender)
+            wallet.nonce += 1
+
             # Saving as json to allow for checking duplicates (doesn't work with classes)
             self.pending.append(transaction.get_json())
+
             return True
 
     @classmethod
@@ -106,11 +112,31 @@ class Blockchain:
 
         return chain
 
-    def create_trans(self, sender: Wallet, receiver: str, amount: float, tip: float):
+    def create_trans(self, sender: Wallet, receiver: str, amount: float, fee: float):
         wallet = self.state.get_wallet(sender.address)
 
+        # Nonce increment for pending transactions
+        extra = sum(x["sender"] == sender.nonce for x in self.pending)
+
         t = Transaction(
-            sender.public_key, receiver, float(amount), float(tip), wallet.nonce + 1
+            sender.public_key,
+            receiver,
+            float(amount),
+            float(fee),
+            wallet.nonce + extra + 1,
         )
         t.sign(sender)
         return t
+
+    def get_balance(self, address: str):
+        # Using get instead of get_wallet method to prevent from creating new wallet in storage
+        wallet = self.state.wallets.get(address, None)
+
+        bal = 0 if wallet is None else wallet.balance
+
+        for p in self.pending:
+            # Only using sender because wallet cannot use output that it hasn't received yet
+            if p["sender"] == address:
+                bal -= p["amount"]
+
+        return bal

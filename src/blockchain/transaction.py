@@ -18,7 +18,7 @@ class Transaction:
         sender_key: str,
         receiver: str,
         amount: float,
-        tip: float,
+        fee: float,
         nonce: int,
         timestamp: float = None,
         signature: str = None,
@@ -29,7 +29,7 @@ class Transaction:
         sender_key: sender public key
         receiver: receiver public address
         amount: coins being sent
-        tip: transaction tip
+        fee: transaction fee
         nonce: account nonce
         timestamp: timestamp of transaction (seconds since the epoch)
         signature: proves that sender approved the transaction
@@ -52,8 +52,8 @@ class Transaction:
 
         self.amount = amount
 
-        # Higher tip gives priority
-        self.tip = tip
+        # Higher fee gives priority
+        self.fee = fee
 
         self.nonce = nonce
 
@@ -75,7 +75,7 @@ class Transaction:
             "sender_key": self.sender_key,
             "receiver": self.receiver,
             "amount": self.amount,
-            "tip": 0,
+            "fee": 0,
             "nonce": self.nonce,
             "signature": self.signature,
             "timestamp": self.timestamp,
@@ -112,7 +112,7 @@ class Transaction:
             raise Exception("Invalid transaction amount")
 
         # Checking if amount is valid
-        if type(self.tip) not in [int, float] or self.tip < 0:
+        if type(self.fee) not in [int, float] or self.fee < 0:
             raise Exception("Invalid fee amount")
 
         # Checking if the sender key is valid
@@ -149,7 +149,7 @@ class Transaction:
         sender_key,
         receiver,
         amount,
-        tip,
+        fee,
         nonce,
         timestamp,
         signature,
@@ -160,7 +160,7 @@ class Transaction:
             sender_key=sender_key,
             receiver=receiver,
             amount=float(amount),
-            tip=float(tip),
+            fee=float(fee),
             nonce=nonce,
             timestamp=timestamp,
             signature=signature,

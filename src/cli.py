@@ -71,18 +71,11 @@ def node():
             print(chain.pending)
 
         elif a == "bal":
-            w = chain.state.get_wallet(input("Address: ") or wallet.address)
+            address = input("Address: ") or wallet.address
 
-            p_bal = 0
+            balance = chain.get_balance(address)
 
-            for p in chain.pending:
-                if p["receiver"] == w.address:
-                    p_bal += p["amount"]
-                if p["sender"] == w.address:
-                    p_bal -= p["amount"]
-
-            balance = p_bal + w.balance
-            print(f"Balance: {balance} Nonce: {w.nonce}")
+            print(f"Balance: {balance}")
 
 
 if __name__ == "__main__":
