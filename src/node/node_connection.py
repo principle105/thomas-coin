@@ -81,9 +81,9 @@ class Node_Connection(threading.Thread):
                 pass
                 # print("socket timeout")
 
-            except:
+            except Exception as e:
                 self.terminate_flag.set()
-                print("Node System: Unexpected error")
+                print("Node System: Unexpected error", str(e))
 
             if chunk != b"":
                 buffer += chunk

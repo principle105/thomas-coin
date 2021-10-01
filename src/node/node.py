@@ -258,18 +258,13 @@ class Node(threading.Thread):
         except:
             print("Invalid transaction given")
         else:
-            # Checking if duplicate
-            if t.get_json() in self.chain.pending:
-                print("found duplicate")
-                return
-
             # Adding to pending transactions
             result = self.chain.add_pending(t)
 
             # If valid
             if result:
-                # Broadcasting new transaction to other nodes except the original
-                self.send_data_to_nodes("newtrans", data, [node])
+                # Broadcasting new transaction and other pending ones to nodes
+                self.send_data_to_nodes("pending", self.chain.pending)
 
     def receive_new_block(self, node, data: dict):
         try:
@@ -288,20 +283,19 @@ class Node(threading.Thread):
         self.send_data_to_node(node, "pending", self.chain.pending)
 
     def receive_pending(self, node, data):
-        valid = []
-
+        added_new = False
         for m in data:
             try:
                 t = Transaction.from_json(**m)
-                self.chain.add_pending(t)
             except:
                 pass
             else:
-                valid.append(m)
-
-        if valid != []:
+                if self.chain.add_pending(t):
+                    added_new = True
+        
+        if added_new:
             # Broadcasting valid pending transaction to other nodes except original
-            self.send_data_to_nodes("pending", valid, [node])
+            self.send_data_to_nodes("pending", self.chain.pending, [node])
 
     def message_from_node(self, node, data):
         if list(data.keys()) != ["type", "data"]:
@@ -320,7 +314,6 @@ class Node(threading.Thread):
                 if len(self.chain.blocks) > len(chain.blocks):
                     if compare_chains(self.chain, chain.blocks):
                         print("setting new main chain")
-                        main_chain = chain
                         chain.save_locally()
                     else:
                         print("Invalid chain")

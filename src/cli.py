@@ -45,6 +45,12 @@ def node():
     print("Starting node")
     node.start()
 
+    # Asking for blockchain from unl nodes
+    node.request_chain()
+    
+    # Asking for pending transactions
+    node.send_data_to_nodes("sendpending", {})
+
     # For testing
     while True:
 
@@ -73,6 +79,12 @@ def node():
 
         elif a == "askpending":
             node.send_data_to_nodes("sendpending", {})
+
+        elif a == "sendpending":
+            node.send_data_to_nodes("pending", chain.pending)
+
+        elif a == "pending":
+            print(chain.pending)
 
         elif a == "bal":
             address = input("Address: ") or wallet.address

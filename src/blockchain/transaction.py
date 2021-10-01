@@ -84,7 +84,7 @@ class Transaction:
         return data
 
     def get_raw_transaction_string(self):
-        return f"{self.sender}{self.receiver}{self.tip}{self.fee}{self.amount}{self.timestamp}{self.nonce}"
+        return f"{self.sender}{self.receiver}{self.tip}{self.amount}{self.timestamp}{self.nonce}"
 
     def get_hash(self) -> str:
         data = self.get_raw_transaction_string().encode()

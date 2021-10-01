@@ -78,16 +78,21 @@ class Blockchain:
         # Making sure the transaction is valid
         try:
             transaction.validate(self.state)
-        except Exception as e:
-            print("The transaction is not valid", str(e))
+        except:
             return False
         else:
+            json_t = transaction.get_json()
+
+            if json_t in self.pending:
+                print("duplicate pending transaction")
+                return False
+
             # Incrementing the nonce
             wallet = self.state.get_wallet(transaction.sender)
             wallet.nonce += 1
 
             # Saving as json to allow for checking duplicates (doesn't work with classes)
-            self.pending.append(transaction.get_json())
+            self.pending.append(json_t)
 
             return True
 
@@ -116,7 +121,7 @@ class Blockchain:
         wallet = self.state.get_wallet(sender.address)
 
         # Nonce increment for pending transactions
-        extra = sum(x["sender"] == sender.nonce for x in self.pending)
+        extra = sum(x["sender"] == wallet.nonce for x in self.pending)
 
         t = Transaction(
             sender.public_key,
