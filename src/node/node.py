@@ -23,6 +23,7 @@ def get_connected_unl():
 
     return nodes
 
+
 def compare_chains(other_chain: Blockchain, our_chain: Blockchain):
     other_chain, our_chain = other_chain.blocks, our_chain.blocks
     """
@@ -279,7 +280,7 @@ class Node(threading.Thread):
             else:
                 if self.chain.add_pending(t):
                     added_new = True
-        
+
         if added_new:
             # Broadcasting valid pending transaction to other nodes except original
             self.send_data_to_nodes("pending", self.chain.pending, [node])

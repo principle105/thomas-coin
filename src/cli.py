@@ -47,7 +47,7 @@ def node():
 
     # Asking for blockchain from unl nodes
     node.request_chain()
-    
+
     # Asking for pending transactions
     node.send_data_to_nodes("sendpending", {})
 
