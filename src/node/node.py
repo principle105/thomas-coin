@@ -271,7 +271,11 @@ class Node(threading.Thread):
         self.send_data_to_node(node, "pending", self.chain.pending)
 
     def receive_pending(self, node, data):
+        if data == self.chain.pending:
+            return
+
         added_new = False
+        
         for m in data:
             try:
                 t = Transaction.from_json(**m)
