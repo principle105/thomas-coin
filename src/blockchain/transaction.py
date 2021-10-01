@@ -4,7 +4,7 @@ from hashlib import sha256
 from ecdsa.curves import SECP256k1
 from base64 import b64encode, b64decode
 from wallet import Wallet
-from constants import MAX_TRANSACTION_SIZE, FIRST_FEE
+from constants import MAX_TRANSACTION_SIZE
 from typing import TYPE_CHECKING
 
 # To avoid circular imports
@@ -63,9 +63,6 @@ class Transaction:
             hash = self.get_hash()
 
         self.hash = hash
-
-    def calculate_fee(self):
-
 
     @property
     def sender_public_key(self):

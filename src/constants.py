@@ -21,7 +21,7 @@ GENESIS_BLOCK_DATA = {
 }
 MAX_BLOCK_SIZE = 50  # transactions
 MAX_TRANSACTION_SIZE = 700  # characters
-MAX_COINS = 100000 # the maximum amount of coins issued (not including genesis)
+MAX_COINS = 100000  # the maximum amount of coins issued (not including genesis)
 
 # Interval of blocks until coins issued per block is changed
 ISSUE_CHANGE_INTERVAL = 10000

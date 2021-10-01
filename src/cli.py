@@ -34,21 +34,29 @@ def node():
     # Creating blockchain
     chain = Blockchain.from_local()
 
+    pk = getpass.getpass(prompt="Your Private Key: ")
+
+    wallet = Wallet(pk)
+
     # Initializing node
     node = Node(host=host, port=port, chain=chain, max_connections=30)
 
     # Starting node
+    print("Starting node")
     node.start()
-
-    pk = getpass.getpass(prompt="Your Private Key: ")
-    wallet = Wallet(pk)
 
     # For testing
     while True:
 
         a = input("What do: ") or "connect"
+
         if a == "connect":
             node.connect_to_unl_nodes()
+
+        elif a == "connect-single":
+            host = input("Host: ") or "127.0.0.1"
+            port = int(input("Port: ") or 3000)
+            node.connect_to_node(host, port)
 
         elif a == "send":
             adr = input("Receiver Address: ")
@@ -60,15 +68,11 @@ def node():
             if chain.add_pending(t):
                 node.send_transaction(t.get_json())
 
-        elif a == "connect-single":
-            host = input("Host: ") or "127.0.0.1"
-            port = int(input("Port: ") or 3000)
-            node.connect_to_node(host, port)
         elif a == "ask":
             node.request_chain()
 
-        elif a == "pending":
-            print(chain.pending)
+        elif a == "askpending":
+            node.send_data_to_nodes("sendpending", {})
 
         elif a == "bal":
             address = input("Address: ") or wallet.address

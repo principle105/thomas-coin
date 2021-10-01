@@ -9,9 +9,8 @@
 
 # Requesting
 
-"sendchain" - Entire blockchain excluding the genesis block
-"sendblock" - Block in the blockchain
-"sendpending" - Pending transactions
+"sendchain" - Asking for the entire blockchain except the genesis block
+"sendpending" - Asking for pending transactions
 
 # Sending
 

@@ -140,5 +140,3 @@ class Blockchain:
                 bal -= p["amount"]
 
         return bal
-
-

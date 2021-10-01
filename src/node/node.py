@@ -244,7 +244,7 @@ class Node(threading.Thread):
 
     def send_chain(self, node):
         # Sending the entire blockchain minus the genesis block
-        self.send_data_to_node(node, "chain", Node.main_node.chain.get_json()[1:])
+        self.send_data_to_node(node, "chain", self.chain.get_json()[1:])
 
     def send_transaction(self, data: dict):
         print("Sending transaction")
@@ -252,7 +252,6 @@ class Node(threading.Thread):
         self.send_data_to_nodes("newtrans", data)
 
     def receive_new_transaction(self, node, data: dict):
-        chain = Node.main_node.chain
         # Validating the new transaction against current chain
         try:
             t = Transaction.from_json(**data)
@@ -260,27 +259,51 @@ class Node(threading.Thread):
             print("Invalid transaction given")
         else:
             # Checking if duplicate
-            if t.get_json() in chain.pending:
+            if t.get_json() in self.chain.pending:
                 print("found duplicate")
                 return
 
             # Adding to pending transactions
-            result = chain.add_pending(t)
+            result = self.chain.add_pending(t)
 
             # If valid
             if result:
                 # Broadcasting new transaction to other nodes except the original
-                h = self.port == 5000
-                if h:
-                    self.send_data_to_nodes("newtrans", data)
-                    self.send_data_to_nodes("newtrans", data)
-                    self.send_data_to_nodes("newtrans", data)
-                else:
-                    self.send_data_to_nodes("newtrans", data, [node])
+                self.send_data_to_nodes("newtrans", data, [node])
+
+    def receive_new_block(self, node, data: dict):
+        try:
+            block = Block.from_json(**data)
+
+            Node.main_node.add_block(block)
+
+        except Exception as e:
+            print("block invalid", str(e))
+
+        else:
+            # Sending new block to other nodes except original
+            self.send_data_to_nodes("block", data, [node])
+
+    def send_pending(self, node):
+        self.send_data_to_node(node, "pending", self.chain.pending)
+
+    def receive_pending(self, node, data):
+        valid = []
+
+        for m in data:
+            try:
+                t = Transaction.from_json(**m)
+                self.chain.add_pending(t)
+            except:
+                pass
+            else:
+                valid.append(m)
+
+        if valid != []:
+            # Broadcasting valid pending transaction to other nodes except original
+            self.send_data_to_nodes("pending", valid, [node])
 
     def message_from_node(self, node, data):
-        main_chain = Node.main_node.chain
-
         if list(data.keys()) != ["type", "data"]:
             print("Incorrect fields")
             return
@@ -294,8 +317,8 @@ class Node(threading.Thread):
                 print("Invalid chain data", str(e))
             else:
                 # Checking if chain is more recent
-                if len(main_chain.blocks) > len(chain.blocks):
-                    if compare_chains(main_chain, chain.blocks):
+                if len(self.chain.blocks) > len(chain.blocks):
+                    if compare_chains(self.chain, chain.blocks):
                         print("setting new main chain")
                         main_chain = chain
                         chain.save_locally()
@@ -304,7 +327,7 @@ class Node(threading.Thread):
 
         elif data["type"] == "sendchain":
             # Checking if node is pruned
-            if main_chain.pruned:
+            if self.chain.pruned:
                 return
 
             print("Sending chain")
@@ -316,20 +339,15 @@ class Node(threading.Thread):
 
         elif data["type"] == "block":
             print("recieved a block")
-
-            try:
-                block = Block.from_json(**data["data"])
-
-                main_chain.add_block(block)
-
-            except Exception as e:
-                print("block invalid", str(e))
+            self.receive_new_block(node, data["data"])
 
         elif data["type"] == "sendpending":
-            pass
+            print("Sending pending transactions another node")
+            self.send_pending(node)
 
         elif data["type"] == "pending":
-            pass
+            print("recieved pending transactions")
+            self.receive_pending(node, data["data"])
 
         else:
             print(node, data)

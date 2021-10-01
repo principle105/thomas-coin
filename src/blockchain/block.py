@@ -3,7 +3,12 @@ import json
 import ecdsa
 from ecdsa.curves import SECP256k1
 from wallet import Wallet
-from constants import GENESIS_BLOCK_DATA, MAX_BLOCK_SIZE
+from constants import (
+    GENESIS_BLOCK_DATA,
+    MAX_BLOCK_SIZE,
+    ISSUE_CHANGE_INTERVAL,
+    MAX_COINS,
+)
 from hashlib import sha256
 from base64 import b64encode, b64decode
 from typing import TYPE_CHECKING
@@ -134,6 +139,21 @@ class Block:
         # Validating each traqnsaction
         for t in self.transactions:
             t.validate(chain_state)
+
+    def calculate_reward(self):
+        """Calculates the reward for the block forger"""
+        if self.index == 0:
+            return 0
+
+        return (
+            MAX_COINS
+            / 2
+            / ISSUE_CHANGE_INTERVAL
+            / (int(self.index + 1 / ISSUE_CHANGE_INTERVAL) + 1)
+        )
+
+    def get_forger(self):
+        pass
 
     @classmethod
     def from_json(
