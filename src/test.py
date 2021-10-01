@@ -6,8 +6,6 @@ except ImportError:
     pass
 
 from blockchain import Block, Transaction
-from os import getenv
-import time
 
 if __name__ == "__main__":
     t = Transaction(

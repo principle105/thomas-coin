@@ -74,15 +74,6 @@ def node():
             if chain.add_pending(t):
                 node.send_transaction(t.get_json())
 
-        elif a == "ask":
-            node.request_chain()
-
-        elif a == "askpending":
-            node.send_data_to_nodes("sendpending", {})
-
-        elif a == "sendpending":
-            node.send_data_to_nodes("pending", chain.pending)
-
         elif a == "pending":
             print(chain.pending)
 

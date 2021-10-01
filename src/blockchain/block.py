@@ -75,9 +75,6 @@ class Block:
             "signature": self.signature,
         }
 
-    def append_transaction(self, transaction: Transaction):
-        self.transactions.append(transaction)
-
     @property
     def forger_verifying_key(self) -> ecdsa.VerifyingKey:
         public_key = bytes.fromhex(self.forger)

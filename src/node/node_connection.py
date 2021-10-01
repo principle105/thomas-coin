@@ -17,9 +17,6 @@ class Node_Connection(threading.Thread):
 
         self.id = id
 
-        self.candidate_block = None
-        self.candidate_block_hash = None
-
         self.EOT_CHAR = 0x04 .to_bytes(1, "big")
 
         self.info = {}
@@ -93,7 +90,6 @@ class Node_Connection(threading.Thread):
                     packet = buffer[:eot_pos]
                     buffer = buffer[eot_pos + 1 :]
 
-                    self.main_node.message_count_recv += 1
                     self.main_node.message_from_node(self, self.parse_packet(packet))
 
                     eot_pos = buffer.find(self.EOT_CHAR)
@@ -102,9 +98,3 @@ class Node_Connection(threading.Thread):
 
         self.sock.settimeout(None)
         self.sock.close()
-
-    def set_info(self, key, value):
-        self.info[key] = value
-
-    def get_info(self, key):
-        return self.info[key]

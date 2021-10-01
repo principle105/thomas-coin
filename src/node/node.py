@@ -23,11 +23,6 @@ def get_connected_unl():
 
     return nodes
 
-
-def node_is_unl(host, port):
-    return {"host": host, "port": port} in get_unl()
-
-
 def compare_chains(other_chain: Blockchain, our_chain: Blockchain):
     other_chain, our_chain = other_chain.blocks, our_chain.blocks
     """
@@ -75,11 +70,6 @@ class Node(threading.Thread):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.init_server()
 
-        # Message counters to make sure everyone is able to track the total messages
-        self.message_count_send = 0
-        self.message_count_recv = 0
-        self.message_count_rerr = 0
-
     def init_server(self):
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((self.host, self.port))
@@ -109,8 +99,6 @@ class Node(threading.Thread):
 
     def send_data_to_nodes(self, msg_type: str, msg_data, exclude=[]):
 
-        self.message_count_send = self.message_count_send + 1
-
         for n in self.nodes_inbound:
 
             if n not in exclude:
@@ -131,7 +119,6 @@ class Node(threading.Thread):
 
         data = {"type": msg_type, "data": msg_data}
 
-        self.message_count_send = self.message_count_send + 1
         self.delete_closed_connections()
         if n in self.nodes_inbound or n in self.nodes_outbound:
             try:
