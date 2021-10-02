@@ -19,8 +19,6 @@ class Node_Connection(threading.Thread):
 
         self.EOT_CHAR = 0x04 .to_bytes(1, "big")
 
-        self.info = {}
-
     def send(self, data, encoding_type="utf-8"):
 
         if isinstance(data, str):
@@ -62,9 +60,6 @@ class Node_Connection(threading.Thread):
             return packet
 
     def run(self):
-        """
-        Thread waits for get data from node and calls the message_from_node method
-        """
         self.sock.settimeout(10.0)
         buffer = b""
 

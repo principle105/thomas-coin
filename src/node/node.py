@@ -13,17 +13,6 @@ def get_unl():
         return json.load(f)
 
 
-def get_connected_unl():
-    unl = get_unl()
-
-    nodes = []
-    for node in Node.main_node.nodes_inbound + Node.main_node.nodes_outbound:
-        if {"host": node.host, "port": node.port} in unl:
-            nodes.append(node)
-
-    return nodes
-
-
 def compare_chains(other_chain: Blockchain, our_chain: Blockchain):
     other_chain, our_chain = other_chain.blocks, our_chain.blocks
     """
@@ -98,6 +87,19 @@ class Node(threading.Thread):
                 n.join()
                 del self.nodes_outbound[self.nodes_inbound.index(n)]
 
+    def get_connected_unl(self) -> list:
+        """
+        List of unl nodes that you are connected to
+        """
+        unl = get_unl()
+
+        nodes = []
+        for node in self.nodes_inbound + self.nodes_outbound:
+            if {"host": node.host, "port": node.port} in unl:
+                nodes.append(node)
+
+        return nodes
+
     def send_data_to_nodes(self, msg_type: str, msg_data, exclude=[]):
 
         for n in self.nodes_inbound:
@@ -132,10 +134,17 @@ class Node(threading.Thread):
 
     def connect_to_unl_nodes(self):
         print("connecting to nodes from unl")
+
+        connected = False
+
         my_node = {"host": self.host, "port": self.port}
+
         for node in get_unl():
             if node != my_node:
-                self.connect_to_node(**node)
+                if self.connect_to_node(**node):
+                    connected = True
+
+        return connected
 
     def connect_to_node(self, host, port):
         # Making sure you can't connect with yourself
@@ -147,7 +156,7 @@ class Node(threading.Thread):
         for node in self.nodes_outbound:
             if node.host == host and node.port == port:
                 print("You are already connected to this node")
-                return True
+                return False
 
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -163,8 +172,10 @@ class Node(threading.Thread):
 
             self.nodes_outbound.append(thread_client)
 
+            return True
+
         except:
-            pass
+            return False
 
     def create_a_new_connection(self, connection, id, host, port):
         return Node_Connection(self, connection, id, host, port)
@@ -225,7 +236,7 @@ class Node(threading.Thread):
 
     def request_chain(self):
         # Getting nodes that we are connected to from unl
-        unl_list = get_connected_unl()
+        unl_list = self.get_connected_unl()
         if unl_list:
             # Requesting block from first unl node
             self.send_data_to_node(unl_list[0], "sendchain", {})
@@ -275,7 +286,7 @@ class Node(threading.Thread):
             return
 
         added_new = False
-        
+
         for m in data:
             try:
                 t = Transaction.from_json(**m)
@@ -294,9 +305,15 @@ class Node(threading.Thread):
             print("Incorrect fields")
             return
 
-        # TODO: check if unl
         if data["type"] == "chain":
+            unl = get_unl()
+
+            # Checking if node is in unl
+            if {"host": node.host, "port": node.port} not in unl:
+                return
+
             print("Received a chain")
+
             try:
                 chain = Blockchain.from_json(data["data"], validate=True)
             except Exception as e:
@@ -333,6 +350,3 @@ class Node(threading.Thread):
         elif data["type"] == "pending":
             print("recieved pending transactions")
             self.receive_pending(node, data["data"])
-
-        else:
-            print(node, data)

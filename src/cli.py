@@ -46,7 +46,8 @@ def node():
     node.start()
 
     # Trying to connect to unl nodes
-    node.connect_to_unl_nodes()
+    if node.connect_to_unl_nodes() is False:
+        print("Unable to connect to any unl nodes")
 
     # Asking for blockchain from unl nodes
     node.request_chain()
