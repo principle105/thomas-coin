@@ -1,5 +1,6 @@
 import ecdsa
 import time
+import logging
 from hashlib import sha256
 from ecdsa.curves import SECP256k1
 from base64 import b64encode, b64decode
@@ -10,6 +11,8 @@ from typing import TYPE_CHECKING
 # To avoid circular imports
 if TYPE_CHECKING:
     from .state import State
+
+logger = logging.getLogger("transaction")
 
 
 class Transaction:
@@ -103,44 +106,50 @@ class Transaction:
             return False
 
     def validate(self, chain_state: "State"):
-        # Checking if transaction exceeds character limit
-        if len(str(self.get_json())) > MAX_TRANSACTION_SIZE:
-            raise Exception("Exceeds maximum transaction size")
 
-        # Checking if amount is valid
-        if type(self.amount) not in [int, float] or self.amount < 0:
-            raise Exception("Invalid transaction amount")
-
-        # Checking if amount is valid
-        if type(self.tip) not in [int, float] or self.tip < 0:
-            raise Exception("Invalid tip amount")
-
-        # Checking if the sender key is valid
         try:
-            _ = self.sender_public_key
-        except ecdsa.MalformedPointError:
-            raise Exception("Sender public key is invalid")
+            # Checking if transaction exceeds character limit
+            if len(str(self.get_json())) > MAX_TRANSACTION_SIZE:
+                raise Exception("Exceeds maximum transaction size")
 
-        # Checking if the block has a signature
-        if self.signature is None:
-            raise Exception("The block is not signed")
+            # Checking if amount is valid
+            if type(self.amount) not in [int, float] or self.amount < 0:
+                raise Exception("Invalid transaction amount")
 
-        # Checking if the signature is valid
-        if self.is_signature_valid() is False:
-            raise Exception("Invalid signature")
+            # Checking if amount is valid
+            if type(self.tip) not in [int, float] or self.tip < 0:
+                raise Exception("Invalid tip amount")
 
-        # TODO: work on tips
+            # Checking if the sender key is valid
+            try:
+                _ = self.sender_public_key
+            except ecdsa.MalformedPointError:
+                raise Exception("Sender public key is invalid")
 
-        # Using get instead of get_wallet method to prevent from creating new wallet in storage
-        wallet = chain_state.wallets.get(self.sender, None)
+            # Checking if the block has a signature
+            if self.signature is None:
+                raise Exception("The block is not signed")
 
-        # Checking if the sender has enough coins to create the transaction
-        if wallet is None or wallet.balance < self.amount:
-            raise Exception("Wallet does not have enough coins for transaction")
+            # Checking if the signature is valid
+            if self.is_signature_valid() is False:
+                raise Exception("Invalid signature")
 
-        # Checking if nonce is invalid
-        if wallet.nonce >= self.nonce:
-            raise Exception("Invalid nonce")
+            # Using get instead of get_wallet method to prevent from creating new wallet in storage
+            wallet = chain_state.wallets.get(self.sender, None)
+
+            # Checking if the sender has enough coins to create the transaction
+            if wallet is None or wallet.balance < self.amount:
+                raise Exception("Wallet does not have enough coins for transaction")
+
+            # Checking if nonce is invalid
+            if wallet.nonce >= self.nonce:
+                raise Exception("Invalid nonce")
+
+        except Exception as e:
+            logger.warning(f"Invalid Transaction: {e}")
+            return False
+
+        return True
 
     @classmethod
     def from_json(

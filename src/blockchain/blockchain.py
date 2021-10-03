@@ -1,4 +1,5 @@
 import os
+import logging
 import _pickle as pickle
 from wallet import Wallet
 from .transaction import Transaction
@@ -6,6 +7,8 @@ from .block import Block
 from config import BLOCK_PATH
 from constants import GENESIS_BLOCK_DATA
 from .state import State
+
+logger = logging.getLogger("blockchain")
 
 
 def get_block_data():
@@ -16,7 +19,7 @@ def get_block_data():
         return pickle.load(f)
 
 
-def dump_block_data(data: list):
+def dump_block_data(data: "Blockchain"):
     with open(BLOCK_PATH, "wb") as f:
         pickle.dump(data, f, protocol=2)
 
@@ -37,14 +40,15 @@ class Blockchain:
         self.add_block(self.get_genesis_block(), False)
 
     def add_block(self, block: Block, validate: bool = True, save: bool = True):
+        if validate:
+            # Checking if the block is valid
+            if block.validate(self.state) is False:
+                return False
+
         # Removing the block transactions from pending
         for t in block.transactions:
             if t in self.pending:
                 self.pending.remove(t)
-
-        if validate:
-            # Checking if the block is valid
-            block.validate(self.state)
 
         self.state.add_block(block)
 
@@ -56,6 +60,8 @@ class Blockchain:
         if save:
             # Saving the blockchain locally
             self.save_locally()
+
+        return True
 
     def validate(self):
         for block in self.blocks:
@@ -72,40 +78,40 @@ class Blockchain:
         return blocks
 
     def save_locally(self):
-        dump_block_data(self.blocks[1:])
+        logger.info("Saving blockchain locally")
+        dump_block_data(self)
 
     def add_pending(self, transaction: Transaction):
         # Making sure the transaction is valid
-        try:
-            transaction.validate(self.state)
-        except:
+
+        if transaction.validate(self.state) is False:
             return False
-        else:
-            json_t = transaction.get_json()
 
-            if json_t in self.pending:
-                print("duplicate pending transaction")
-                return False
+        json_t = transaction.get_json()
 
-            # Incrementing the nonce
-            wallet = self.state.get_wallet(transaction.sender)
-            wallet.nonce += 1
+        if json_t in self.pending:
+            logger.warning("Duplicate pending transaction")
+            return False
 
-            # Saving as json to allow for checking duplicates (doesn't work with classes)
-            self.pending.append(json_t)
+        # Incrementing the nonce
+        wallet = self.state.get_wallet(transaction.sender)
+        wallet.nonce += 1
 
-            return True
+        logger.info("Adding pending transaction to pool")
+
+        # Saving as json to allow for checking duplicates (doesn't work with classes)
+        self.pending.append(json_t)
+
+        return True
 
     @classmethod
     def from_local(cls):
-        blocks = get_block_data()
-        chain = cls()
+        prev_chain = get_block_data()
 
-        if blocks:
-            for b in blocks:
-                chain.add_block(b, save=False)
-
-        return chain
+        if prev_chain is False:
+            return cls()
+            
+        return prev_chain
 
     @classmethod
     def from_json(cls, blocks: list, validate: bool = False):

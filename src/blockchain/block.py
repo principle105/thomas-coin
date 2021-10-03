@@ -1,6 +1,7 @@
 import time
 import json
 import ecdsa
+import logging
 from ecdsa.curves import SECP256k1
 from wallet import Wallet
 from constants import (
@@ -17,6 +18,8 @@ from .transaction import Transaction
 # To avoid circular imports
 if TYPE_CHECKING:
     from .state import State
+
+logger = logging.getLogger("block")
 
 
 class Block:
@@ -68,6 +71,7 @@ class Block:
         return sha256(block_string).hexdigest()
 
     def get_json(self):
+        """Converts the block into json"""
         data = self.get_raw_data()
         return {
             **data,
@@ -94,48 +98,58 @@ class Block:
         self.signature = b64encode(forger.sk.sign(self.hash.encode())).decode()
 
     def validate(self, chain_state: "State"):
-        """
-        chain: blockchain object
-        """
+        """Validates the block"""
 
-        # Checking if the block has a signature
-        if self.signature is None:
-            raise Exception("The block is not signed")
+        try:
+            # Checking if the block has a signature
+            if self.signature is None:
+                raise Exception("The block is not signed")
 
-        # Checking if the block has a forger
-        if self.forger is None:
-            raise Exception("Block does not have a forger")
+            # Checking if the block has a forger
+            if self.forger is None:
+                raise Exception("Block does not have a forger")
 
-        if chain_state.length == 0:
-            raise Exception("Chain is empty")
+            if chain_state.length == 0:
+                raise Exception("Chain is empty")
 
-        # Checking if the block is the genesis block
-        if self.index == chain_state.length - 1 == 0:
-            # Checking if the genesis block is valid
-            if self.get_json() != GENESIS_BLOCK_DATA:
-                raise Exception("Genesis block is not valid")
+            # Checking if the block is the genesis block
+            if self.index == chain_state.length - 1 == 0:
+                # Checking if the genesis block is valid
+                if self.get_json() != GENESIS_BLOCK_DATA:
+                    raise Exception("Genesis block is not valid")
 
-            return
+                return
 
-        # Checking if the block comes after the last block in the chain
-        if self.index != chain_state.length:
-            raise Exception(f"Incorrect block index {self.index} {chain_state.length}")
+            # Checking if the block comes after the last block in the chain
+            if self.index != chain_state.length:
+                raise Exception(
+                    f"Incorrect block index {self.index} {chain_state.length}"
+                )
 
-        # Checking the previous hash
-        if self.prev != chain_state.last_block:
-            raise Exception("Previous hash does not match")
+            # Checking the previous hash
+            if self.prev != chain_state.last_block:
+                raise Exception("Previous hash does not match")
 
-        # Checking if signature is verified
-        if self.is_signature_verified() is False:
-            raise Exception("Invalid block signature")
+            # Checking if signature is verified
+            if self.is_signature_verified() is False:
+                raise Exception("Invalid block signature")
 
-        # Checking if block does not exceed max size
-        if len(self.transactions) > MAX_BLOCK_SIZE:
-            raise Exception("Exceeds maximum block size")
+            # Checking if block does not exceed max size
+            if len(self.transactions) > MAX_BLOCK_SIZE:
+                raise Exception("Exceeds maximum block size")
 
-        # Validating each traqnsaction
-        for t in self.transactions:
-            t.validate(chain_state)
+        except Exception as e:
+            logger.warning(f"Invalid Block: {e}")
+
+        else:
+            # Validating each transaction
+            for t in self.transactions:
+                if t.validate(chain_state) is False:
+                    return False
+
+            return True
+
+        return False
 
     def calculate_reward(self):
         """Calculates the reward for the block forger"""

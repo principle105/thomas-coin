@@ -1,7 +1,9 @@
 import typer
 import getpass
 import requests
+import logging
 from typer.colors import BRIGHT_YELLOW, BRIGHT_BLUE
+from config import LOG_PATH
 from wallet import Wallet
 from node import Node
 from blockchain import Blockchain
@@ -11,6 +13,15 @@ app = typer.Typer()
 
 def get_public_ip():
     return requests.get("https://api.ipify.org").text
+
+def create_logger(host, port):
+    logging.basicConfig(
+        filename=f"{LOG_PATH}{host}:{port}.log",
+        level=logging.DEBUG,
+        style="{",
+        format="{asctime}:{name} {message}",
+        filemode="w",
+    )
 
 
 @app.command()
@@ -44,6 +55,9 @@ def node():
     # Starting node
     print("Starting node")
     node.start()
+
+    # Creating logger
+    create_logger(host, port)
 
     # Trying to connect to unl nodes
     if node.connect_to_unl_nodes() is False:
@@ -87,6 +101,9 @@ def node():
             balance = chain.get_balance(address)
 
             print(f"Balance: {balance}")
+        
+        elif a == "conn":
+            print(len(node.nodes_outbound) + len(node.nodes_inbound))
 
 
 if __name__ == "__main__":

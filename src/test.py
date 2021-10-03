@@ -10,7 +10,7 @@ from blockchain import Block, Transaction
 if __name__ == "__main__":
     t = Transaction(
         sender_key="GENESIS",
-        receiver="Te32761fe9b7b617f327c5b428bd29d8b5b4d7929",
+        receiver="T6a0459220225c6b4bfaef26ec87844a072afc29a",
         amount=10000.0,
         tip=0.0,
         nonce=0,
