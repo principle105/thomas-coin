@@ -14,6 +14,15 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("transaction")
 
+# class Tx_Input:
+#     def __init__(self, index: int, id: str):
+#         self.index = index
+#         self.id = id
+
+# class Tx_Output:
+#     def __init__(self, address: str, amount: float):
+#         self.address = address
+#         self.amount = amount
 
 class Transaction:
     def __init__(

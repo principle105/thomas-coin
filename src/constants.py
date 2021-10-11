@@ -2,21 +2,21 @@ GENESIS_BLOCK_DATA = {
     "index": 0,
     "prev": "0",
     "forger": "0",
-    "timestamp": 1633270314.217898,
+    "timestamp": 1633628429.6876318,
     "transactions": [
         {
             "sender": "GENESIS",
             "sender_key": "GENESIS",
-            "receiver": "T6a0459220225c6b4bfaef26ec87844a072afc29a",
+            "receiver": "Te32761fe9b7b617f327c5b428bd29d8b5b4d7929",
             "amount": 10000.0,
             "tip": 0,
             "nonce": 0,
             "signature": "0",
-            "timestamp": 1633270314.217428,
-            "hash": "77034b046efebbf915d3da176ad234581a4e774876bd0f685e05e401e822ecd9",
+            "timestamp": 1633628429.687479,
+            "hash": "88f318826e7a0ad341a5df53b9c0b922359b535fd8df22c6435aa28d1637dc04",
         }
     ],
-    "hash": "c22bdff26215d7485d1bcac4206a9f9eb8a1aa5a6aae73097e70b91d8b7b7829",
+    "hash": "216c5b5a7fb49f1420dcc615a12b9c7eddff04256612050474be699e8bf48aa3",
     "signature": "0",
 }
 MAX_BLOCK_SIZE = 50  # transactions

@@ -65,7 +65,9 @@ class Blockchain:
 
     def validate(self):
         for block in self.blocks:
-            block.validate(self.state)
+            if block.validate(self.state) is False:
+                return False
+        return True
 
     def get_genesis_block(self):
         return Block.from_json(**GENESIS_BLOCK_DATA)
@@ -110,7 +112,7 @@ class Blockchain:
 
         if prev_chain is False:
             return cls()
-            
+
         return prev_chain
 
     @classmethod
@@ -151,3 +153,6 @@ class Blockchain:
                 bal -= p["amount"]
 
         return bal
+
+    def get_winner(self, block: Block):
+        

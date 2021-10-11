@@ -17,13 +17,14 @@ def get_unl():
         return json.load(f)
 
 
-def compare_chains(other_chain: Blockchain, our_chain: Blockchain):
-    other_chain, our_chain = other_chain.blocks, our_chain.blocks
+def compare_chains(other_chain: list[Block], our_chain: list[Block]):
+    our_chain = our_chain.blocks
     """
-    Validates another blockchain against ours
+    Validates a list of blocks against our blockchain
     """
+
     for i in range(len(our_chain)):
-        if other_chain[i] != our_chain[i]:
+        if other_chain[i].get_json() != our_chain[i].get_json():
             return False
 
     return True
@@ -80,7 +81,7 @@ class Node(threading.Thread):
 
     def generate_id(self):
         id = hashlib.sha512()
-        t = self.host + str(self.port) + str(random.randint(1,999))
+        t = self.host + str(self.port) + str(random.randint(1, 999))
         id.update(t.encode("ascii"))
         return id.hexdigest()
 
@@ -286,7 +287,7 @@ class Node(threading.Thread):
     def receive_new_block(self, node, data: dict):
         try:
             block = Block.from_json(**data)
-        except Exception as e:
+        except:
             logger.warning("Malformed block data")
         else:
             if self.chain.add_block(block):
@@ -318,16 +319,17 @@ class Node(threading.Thread):
     def receive_chain(self, data):
         try:
             chain = Blockchain.from_json(data, validate=True)
-        except Exception as e:
+        except:
             logger.warning("Invalid chain data")
         else:
             # Checking if chain is more recent
-            if len(self.chain.blocks) > len(chain.blocks):
-                if compare_chains(self.chain, chain.blocks):
+            if len(self.chain.blocks) < len(chain.blocks):
+                if compare_chains(chain.blocks, self.chain.blocks):
                     logger.info("Setting new main chain")
-                    chain.save_locally()
+                    for block in chain:
+                        self.chain.add_block(block)
                 else:
-                    logger.info("Invalid chain data")
+                    logger.info("Chain data does not match up with ours")
 
     def message_from_node(self, node, data):
         if list(data.keys()) != ["type", "data"]:

@@ -126,6 +126,11 @@ class Block:
                     f"Incorrect block index {self.index} {chain_state.length}"
                 )
 
+            # Checking if the timestamp is valid
+            # If timestamp is over 1 minute before last block was created
+            if self.timestamp + 60 < chain_state.last_block.timestamp:
+                raise Exception("Invalid timestamp")
+
             # Checking the previous hash
             if self.prev != chain_state.last_block:
                 raise Exception("Previous hash does not match")

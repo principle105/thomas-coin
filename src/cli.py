@@ -14,6 +14,7 @@ app = typer.Typer()
 def get_public_ip():
     return requests.get("https://api.ipify.org").text
 
+
 def create_logger(host, port):
     logging.basicConfig(
         filename=f"{LOG_PATH}{host}:{port}.log",
@@ -41,6 +42,9 @@ def node():
 
     host = input("Host: ") or "127.0.0.1"
     port = int(input("Port: ") or 3000)
+    full_node = not bool(input("Full Node: "))
+
+    print("Full Node", full_node)
 
     # Creating blockchain
     chain = Blockchain.from_local()
@@ -50,7 +54,9 @@ def node():
     wallet = Wallet(pk)
 
     # Initializing node
-    node = Node(host=host, port=port, chain=chain, max_connections=30)
+    node = Node(
+        host=host, port=port, chain=chain, max_connections=30, full_node=full_node
+    )
 
     # Starting node
     print("Starting node")
@@ -101,7 +107,7 @@ def node():
             balance = chain.get_balance(address)
 
             print(f"Balance: {balance}")
-        
+
         elif a == "conn":
             print(len(node.nodes_outbound) + len(node.nodes_inbound))
 
