@@ -2,14 +2,11 @@ import threading
 import hashlib
 import socket
 import time
-import logging
 import random
 import json
 from .node_connection import Node_Connection
 from blockchain import Blockchain, Transaction, Block
 from config import UNL_PATH, MIN_TIP
-
-logger = logging.getLogger("node")
 
 
 def get_unl():
@@ -139,14 +136,12 @@ class Node(threading.Thread):
         if n in self.nodes_inbound or n in self.nodes_outbound:
             try:
                 n.send(data)
-
             except:
-                logging.warning("Error while sendingdata")
+                pass
         else:
             print("Node not found")
 
     def connect_to_unl_nodes(self):
-        logging.info("Trying to connect to unl nodes")
 
         connected = False
 
@@ -162,13 +157,11 @@ class Node(threading.Thread):
     def connect_to_node(self, host, port):
         # Making sure you can't connect with yourself
         if host == self.host and port == self.port:
-            logging.warning("You can't connect with yourself")
             return False
 
         # Checking if you are already connected to this node
         for node in self.nodes_outbound:
             if node.host == host and node.port == port:
-                logger.warning("You are already connected to this node")
                 return False
 
         try:
@@ -182,8 +175,6 @@ class Node(threading.Thread):
                 sock, connected_node_id, host, port
             )
             thread_client.start()
-
-            logging.info(f"Connected with node")
 
             self.nodes_outbound.append(thread_client)
 
@@ -230,8 +221,6 @@ class Node(threading.Thread):
 
             time.sleep(0.01)
 
-        logger.info("Node stopping")
-
         for t in self.nodes_inbound:
             t.stop()
 
@@ -248,7 +237,6 @@ class Node(threading.Thread):
 
         self.sock.settimeout(None)
         self.sock.close()
-        logger.info("Node stopped")
 
     def request_chain(self):
         # Getting nodes that we are connected to from unl
@@ -262,7 +250,6 @@ class Node(threading.Thread):
         self.send_data_to_node(node, "chain", self.chain.get_json()[1:])
 
     def send_transaction(self, data: dict):
-        logger.info("Broadcasting transaction")
         # Sending the transaction data to all the nodes
         self.send_data_to_nodes("newtrans", data)
 
@@ -271,11 +258,10 @@ class Node(threading.Thread):
         try:
             t = Transaction.from_json(**data)
         except:
-            logger.warning("Malformed transaction data")
+            pass
         else:
             # Not accepting transaction if under configured minimum tip
             if t.tip < MIN_TIP:
-                logger.warning("Transaction under minimum tip")
                 return
 
             # Adding to pending transactions and checking if it's valid
@@ -288,7 +274,7 @@ class Node(threading.Thread):
         try:
             block = Block.from_json(**data)
         except:
-            logger.warning("Malformed block data")
+            pass
         else:
             if self.chain.add_block(block):
                 # Sending new block to other nodes except original
@@ -320,16 +306,13 @@ class Node(threading.Thread):
         try:
             chain = Blockchain.from_json(data, validate=True)
         except:
-            logger.warning("Invalid chain data")
+            pass
         else:
             # Checking if chain is more recent
             if len(self.chain.blocks) < len(chain.blocks):
                 if compare_chains(chain.blocks, self.chain.blocks):
-                    logger.info("Setting new main chain")
                     for block in chain:
                         self.chain.add_block(block)
-                else:
-                    logger.info("Chain data does not match up with ours")
 
     def message_from_node(self, node, data):
         if list(data.keys()) != ["type", "data"]:
@@ -342,20 +325,15 @@ class Node(threading.Thread):
             if {"host": node.host, "port": node.port} not in unl:
                 return
 
-            logger.info("Received chain from unl node")
-
             self.receive_chain(data["data"])
 
         elif data["type"] == "newtrans":
-            logger.info("Received a new transaction")
             self.receive_new_transaction(node, data["data"])
 
         elif data["type"] == "block":
-            logger.info("Received a new block")
             self.receive_new_block(node, data["data"])
 
         elif data["type"] == "pending":
-            logger.info("Received a new pending transaction")
             self.receive_pending(node, data["data"])
 
         # Checking if node is a full node
@@ -365,9 +343,7 @@ class Node(threading.Thread):
                 if self.chain.pruned:
                     return
 
-                logger.info("Sending chain to node")
                 self.send_chain(node)
 
             elif data["type"] == "sendpending":
-                logger.info("Sending pending transaction to node")
                 self.send_pending(node)

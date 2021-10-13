@@ -1,5 +1,4 @@
 import os
-import logging
 import _pickle as pickle
 from wallet import Wallet
 from .transaction import Transaction
@@ -7,8 +6,6 @@ from .block import Block
 from config import BLOCK_PATH
 from constants import GENESIS_BLOCK_DATA
 from .state import State
-
-logger = logging.getLogger("blockchain")
 
 
 def get_block_data():
@@ -80,7 +77,6 @@ class Blockchain:
         return blocks
 
     def save_locally(self):
-        logger.info("Saving blockchain locally")
         dump_block_data(self)
 
     def add_pending(self, transaction: Transaction):
@@ -92,14 +88,11 @@ class Blockchain:
         json_t = transaction.get_json()
 
         if json_t in self.pending:
-            logger.warning("Duplicate pending transaction")
             return False
 
         # Incrementing the nonce
         wallet = self.state.get_wallet(transaction.sender)
         wallet.nonce += 1
-
-        logger.info("Adding pending transaction to pool")
 
         # Saving as json to allow for checking duplicates (doesn't work with classes)
         self.pending.append(json_t)
@@ -153,6 +146,3 @@ class Blockchain:
                 bal -= p["amount"]
 
         return bal
-
-    def get_winner(self, block: Block):
-        

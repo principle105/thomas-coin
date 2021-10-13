@@ -1,7 +1,6 @@
 import time
 import json
 import ecdsa
-import logging
 from ecdsa.curves import SECP256k1
 from wallet import Wallet
 from constants import (
@@ -18,8 +17,6 @@ from .transaction import Transaction
 # To avoid circular imports
 if TYPE_CHECKING:
     from .state import State
-
-logger = logging.getLogger("block")
 
 
 class Block:
@@ -99,62 +96,52 @@ class Block:
 
     def validate(self, chain_state: "State"):
         """Validates the block"""
+        # Checking if the block has a signature
+        if self.signature is None:
+            return False
 
-        try:
-            # Checking if the block has a signature
-            if self.signature is None:
-                raise Exception("The block is not signed")
+        # Checking if the block has a forger
+        if self.forger is None:
+            return False
 
-            # Checking if the block has a forger
-            if self.forger is None:
-                raise Exception("Block does not have a forger")
+        if chain_state.length == 0:
+            return False
 
-            if chain_state.length == 0:
-                raise Exception("Chain is empty")
+        # Checking if the block is the genesis block
+        if self.index == chain_state.length - 1 == 0:
+            # Checking if the genesis block is valid
+            if self.get_json() != GENESIS_BLOCK_DATA:
+                return False
 
-            # Checking if the block is the genesis block
-            if self.index == chain_state.length - 1 == 0:
-                # Checking if the genesis block is valid
-                if self.get_json() != GENESIS_BLOCK_DATA:
-                    raise Exception("Genesis block is not valid")
+            return False
 
-                return
+        # Checking if the block comes after the last block in the chain
+        if self.index != chain_state.length:
+            return False
 
-            # Checking if the block comes after the last block in the chain
-            if self.index != chain_state.length:
-                raise Exception(
-                    f"Incorrect block index {self.index} {chain_state.length}"
-                )
+        # Checking if the timestamp is valid
+        # If timestamp is over 1 minute before last block was created
+        if self.timestamp + 60 < chain_state.last_block.timestamp:
+            return False
 
-            # Checking if the timestamp is valid
-            # If timestamp is over 1 minute before last block was created
-            if self.timestamp + 60 < chain_state.last_block.timestamp:
-                raise Exception("Invalid timestamp")
+        # Checking the previous hash
+        if self.prev != chain_state.last_block:
+            return False
 
-            # Checking the previous hash
-            if self.prev != chain_state.last_block:
-                raise Exception("Previous hash does not match")
+        # Checking if signature is verified
+        if self.is_signature_verified() is False:
+            return False
 
-            # Checking if signature is verified
-            if self.is_signature_verified() is False:
-                raise Exception("Invalid block signature")
+        # Checking if block does not exceed max size
+        if len(self.transactions) > MAX_BLOCK_SIZE:
+            return False
 
-            # Checking if block does not exceed max size
-            if len(self.transactions) > MAX_BLOCK_SIZE:
-                raise Exception("Exceeds maximum block size")
+        # Validating each transaction
+        for t in self.transactions:
+            if t.validate(chain_state) is False:
+                return False
 
-        except Exception as e:
-            logger.warning(f"Invalid Block: {e}")
-
-        else:
-            # Validating each transaction
-            for t in self.transactions:
-                if t.validate(chain_state) is False:
-                    return False
-
-            return True
-
-        return False
+        return True
 
     def calculate_reward(self):
         """Calculates the reward for the block forger"""
@@ -167,9 +154,6 @@ class Block:
             / ISSUE_CHANGE_INTERVAL
             / (int(self.index + 1 / ISSUE_CHANGE_INTERVAL) + 1)
         )
-
-    def get_forger(self):
-        pass
 
     @classmethod
     def from_json(

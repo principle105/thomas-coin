@@ -4,4 +4,3 @@ venv
 .vscode
 .env
 blocks.thom
-*.log
