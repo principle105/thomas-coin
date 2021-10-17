@@ -12,18 +12,6 @@ if TYPE_CHECKING:
     from .state import State
 
 
-class Tx_Input:
-    def __init__(self, index: int, id: str):
-        self.index = index
-        self.id = id
-
-
-class Tx_Output:
-    def __init__(self, address: str, amount: float):
-        self.address = address
-        self.amount = amount
-
-
 class Transaction:
     def __init__(
         self,
@@ -70,9 +58,6 @@ class Transaction:
         self.nonce = nonce
 
         self.signature = signature
-
-        self.inputs = []
-        self.outputs = []
 
         if hash is None:
             hash = self.get_hash()
@@ -140,7 +125,7 @@ class Transaction:
         if self.signature is None:
             return False
 
-        # Checking if the signature is valid
+        # Checking if the signature is valid and matches transaction data
         if self.is_signature_valid() is False:
             return False
 

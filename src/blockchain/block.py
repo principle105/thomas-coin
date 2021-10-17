@@ -27,6 +27,7 @@ class Block:
         forger: str = None,
         timestamp: float = None,
         transactions: list[Transaction] = [],
+        difficulty: int = None,
         signature: str = None,
         hash: str = None,
     ):
@@ -35,10 +36,13 @@ class Block:
 
         self.index = index
         self.prev = prev
+
         # Public key of block forger
         self.forger = forger
+
         self.timestamp = timestamp
         self.transactions = transactions
+        self.difficulty = difficulty
         self.signature = signature
 
         if hash is None:
@@ -52,6 +56,7 @@ class Block:
             "prev": self.prev,
             "forger": self.forger,
             "timestamp": self.timestamp,
+            "difficulty": self.difficulty,
             "transactions": self.get_transactions_as_json(),
         }
         return data
@@ -128,7 +133,7 @@ class Block:
         if self.prev != chain_state.last_block:
             return False
 
-        # Checking if signature is verified
+        # Checking if signature is verified and matches block data
         if self.is_signature_verified() is False:
             return False
 
@@ -157,7 +162,15 @@ class Block:
 
     @classmethod
     def from_json(
-        cls, index, prev, forger, timestamp, transactions: list, signature, hash
+        cls,
+        index: int,
+        prev: str,
+        forger: str,
+        timestamp: float,
+        transactions: list,
+        difficulty: int,
+        signature: str,
+        hash: str,
     ):
         transactions = list(map(lambda t: Transaction.from_json(**t), transactions))
         return cls(
@@ -166,6 +179,7 @@ class Block:
             forger=forger,
             timestamp=timestamp,
             transactions=transactions,
+            difficulty=difficulty,
             signature=signature,
             hash=hash,
         )

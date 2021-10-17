@@ -2,7 +2,6 @@ import typer
 import getpass
 import requests
 from typer.colors import BRIGHT_YELLOW, BRIGHT_BLUE
-from config import LOG_PATH
 from wallet import Wallet
 from node import Node
 from blockchain import Blockchain
@@ -83,6 +82,9 @@ def node():
 
             if chain.add_pending(t):
                 node.send_transaction(t.get_json())
+
+        elif a in ["mine", "validate"]:
+            node.start_validating(wallet)
 
         elif a == "pending":
             print(chain.pending)

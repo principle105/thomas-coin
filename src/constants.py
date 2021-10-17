@@ -2,7 +2,8 @@ GENESIS_BLOCK_DATA = {
     "index": 0,
     "prev": "0",
     "forger": "0",
-    "timestamp": 1633628429.6876318,
+    "timestamp": 1634442655.099822,
+    "difficulty": 0,
     "transactions": [
         {
             "sender": "GENESIS",
@@ -12,16 +13,21 @@ GENESIS_BLOCK_DATA = {
             "tip": 0,
             "nonce": 0,
             "signature": "0",
-            "timestamp": 1633628429.687479,
-            "hash": "88f318826e7a0ad341a5df53b9c0b922359b535fd8df22c6435aa28d1637dc04",
+            "timestamp": 1634442655.099783,
+            "hash": "e3b6f7da2343eccf0ae509ce3482b48a29600550215f40cef04a4938f77a6a43",
         }
     ],
-    "hash": "216c5b5a7fb49f1420dcc615a12b9c7eddff04256612050474be699e8bf48aa3",
+    "hash": "6f54b3618ef651646570288329d2f0759bf1c35a8af9a5a6dd5714c7e3d661f1",
     "signature": "0",
 }
 MAX_BLOCK_SIZE = 50  # transactions
 MAX_TRANSACTION_SIZE = 700  # characters
-MAX_COINS = 100000  # the maximum amount of coins issued (not including genesis)
+
+# Maximum amount of coins issued (not including genesis)
+MAX_COINS = 100000
 
 # Interval of blocks until coins issued per block is changed
 ISSUE_CHANGE_INTERVAL = 10000
+
+# Amount of initial blocks that do not require to be minted with coins
+NO_COIN_AMOUNT = 100

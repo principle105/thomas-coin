@@ -1,4 +1,5 @@
 import os
+import time
 import _pickle as pickle
 from wallet import Wallet
 from .transaction import Transaction
@@ -125,14 +126,14 @@ class Blockchain:
         extra = sum(x["sender"] == wallet.nonce for x in self.pending)
 
         t = Transaction(
-            sender.public_key,
-            receiver,
-            float(amount),
-            float(tip),
-            wallet.nonce + extra + 1,
+            sender_key=sender.public_key,
+            receiver=receiver,
+            amount=float(amount),
+            tip=float(tip),
+            nonce=wallet.nonce + extra + 1,
         )
         t.sign(sender)
-        return t
+        return
 
     def get_balance(self, address: str):
         # Using get instead of get_wallet method to prevent from creating new wallet in storage
@@ -146,3 +147,14 @@ class Blockchain:
                 bal -= p["amount"]
 
         return bal
+
+    # Based off: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2.md
+    def calculate_next_difficulty(self) -> int:
+        """Calculates the difficulty of the next block"""
+        return int(
+            self.state.last_block.difficulty
+            + self.state.last_block.difficulty
+            // 2048
+            * max(1 - (time.time() - self.state.last_block.timestamp) // 10, -99)
+            + int(2 ** ((self.state.length // 100000) - 2))
+        )
