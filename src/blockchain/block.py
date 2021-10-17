@@ -11,6 +11,7 @@ from constants import (
 )
 from hashlib import sha256
 from base64 import b64encode, b64decode
+from base58 import b58decode
 from typing import TYPE_CHECKING
 from .transaction import Transaction
 
@@ -24,7 +25,7 @@ class Block:
         self,
         index: int,
         prev: str,
-        forger: str = None,
+        forger: str,
         timestamp: float = None,
         transactions: list[Transaction] = [],
         difficulty: int = None,
@@ -37,7 +38,7 @@ class Block:
         self.index = index
         self.prev = prev
 
-        # Public key of block forger
+        # Address of block forger
         self.forger = forger
 
         self.timestamp = timestamp
@@ -82,31 +83,27 @@ class Block:
         }
 
     @property
-    def forger_verifying_key(self) -> ecdsa.VerifyingKey:
-        public_key = bytes.fromhex(self.forger)
-        return ecdsa.VerifyingKey.from_string(public_key, curve=SECP256k1)
+    def forger_vk(self) -> ecdsa.VerifyingKey:
+        return ecdsa.VerifyingKey.from_string(
+            b58decode(self.forger[1:]), curve=SECP256k1
+        )
 
     def is_signature_verified(self) -> bool:
         """Checks if the block signature is valid"""
         try:
-            return self.forger_verifying_key.verify(
+            return self.forger_vk.verify(
                 b64decode(self.signature.encode()), self.hash.encode()
             )
         except ecdsa.BadSignatureError:
             return False
 
     def sign(self, forger: Wallet):
-        self.forger = forger.public_key
         self.signature = b64encode(forger.sk.sign(self.hash.encode())).decode()
 
     def validate(self, chain_state: "State"):
         """Validates the block"""
         # Checking if the block has a signature
         if self.signature is None:
-            return False
-
-        # Checking if the block has a forger
-        if self.forger is None:
             return False
 
         if chain_state.length == 0:

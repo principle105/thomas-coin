@@ -3,6 +3,7 @@ import time
 from hashlib import sha256
 from ecdsa.curves import SECP256k1
 from base64 import b64encode, b64decode
+from base58 import b58decode
 from wallet import Wallet
 from constants import MAX_TRANSACTION_SIZE
 from typing import TYPE_CHECKING
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 class Transaction:
     def __init__(
         self,
-        sender_key: str,
+        sender: str,
         receiver: str,
         amount: float,
         tip: float,
@@ -23,11 +24,10 @@ class Transaction:
         timestamp: float = None,
         signature: str = None,
         hash: str = None,
-        sender: str = None,
     ):
         """
-        sender_key: sender public key
-        receiver: receiver public address
+        sender: sender address
+        receiver: receiver address
         amount: coins being sent
         tip: transaction tip
         nonce: account nonce
@@ -41,12 +41,7 @@ class Transaction:
             timestamp = time.time()
         self.timestamp = timestamp
 
-        if sender is None:
-            sender = Wallet.convert_to_address(sender_key)
-
         self.sender = sender
-
-        self.sender_key = sender_key
 
         self.receiver = receiver
 
@@ -65,14 +60,14 @@ class Transaction:
         self.hash = hash
 
     @property
-    def sender_public_key(self):
-        key_string = bytes.fromhex(self.sender_key)
-        return ecdsa.VerifyingKey.from_string(key_string, curve=SECP256k1)
+    def sender_vk(self) -> ecdsa.VerifyingKey:
+        return ecdsa.VerifyingKey.from_string(
+            b58decode(self.sender[1:]), curve=SECP256k1
+        )
 
     def get_json(self):
         data = {
             "sender": self.sender,
-            "sender_key": self.sender_key,
             "receiver": self.receiver,
             "amount": self.amount,
             "tip": 0,
@@ -94,9 +89,8 @@ class Transaction:
         self.signature = b64encode(wallet.sk.sign(self.hash.encode())).decode()
 
     def is_signature_valid(self):
-        sender_key = self.sender_public_key
         try:
-            return sender_key.verify(
+            return self.sender_vk.verify(
                 signature=b64decode(self.signature.encode()), data=self.hash.encode()
             )
         except ecdsa.BadSignatureError:
@@ -113,12 +107,6 @@ class Transaction:
 
         # Checking if amount is valid
         if type(self.tip) not in [int, float] or self.tip < 0:
-            return False
-
-        # Checking if the sender key is valid
-        try:
-            _ = self.sender_public_key
-        except ecdsa.MalformedPointError:
             return False
 
         # Checking if the block has a signature
@@ -146,7 +134,6 @@ class Transaction:
     def from_json(
         cls,
         sender,
-        sender_key,
         receiver,
         amount,
         tip,
@@ -157,7 +144,6 @@ class Transaction:
     ):
         return cls(
             sender=sender,
-            sender_key=sender_key,
             receiver=receiver,
             amount=float(amount),
             tip=float(tip),

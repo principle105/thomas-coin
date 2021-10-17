@@ -20,9 +20,13 @@ def wallet():
     if not secret:
         secret = None
 
-    wallet = Wallet(secret=secret)
-    typer.secho(f"ADDRESS: {wallet.address}", fg=BRIGHT_BLUE)
-    typer.secho(f"PRIVATE KEY: {wallet.private_key}", fg=BRIGHT_YELLOW)
+    while True:
+        wallet = Wallet(secret=secret)
+
+        if "thomas" == wallet.address.lower()[:6]:
+            typer.secho(f"ADDRESS: {wallet.address}", fg=BRIGHT_BLUE)
+            typer.secho(f"PRIVATE KEY: {wallet.private_key}", fg=BRIGHT_YELLOW)
+            break
 
 
 @app.command()

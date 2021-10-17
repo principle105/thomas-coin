@@ -126,14 +126,14 @@ class Blockchain:
         extra = sum(x["sender"] == wallet.nonce for x in self.pending)
 
         t = Transaction(
-            sender_key=sender.public_key,
+            sender=sender.address,
             receiver=receiver,
             amount=float(amount),
             tip=float(tip),
             nonce=wallet.nonce + extra + 1,
         )
         t.sign(sender)
-        return
+        return t
 
     def get_balance(self, address: str):
         # Using get instead of get_wallet method to prevent from creating new wallet in storage

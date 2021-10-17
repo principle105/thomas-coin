@@ -9,12 +9,11 @@ from blockchain import Block, Transaction
 
 if __name__ == "__main__":
     t = Transaction(
-        sender_key="GENESIS",
-        receiver="Te32761fe9b7b617f327c5b428bd29d8b5b4d7929",
+        sender="GENESIS",
+        receiver="T26nNx7Ai2Je4EnXGKGPnXcEHqNntMhewnZFpJYhXjozWF",
         amount=10000.0,
         tip=0.0,
         nonce=0,
-        sender="GENESIS",
     )
     t.signature = "0"
 
