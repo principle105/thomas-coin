@@ -104,6 +104,7 @@ class Blockchain:
     def from_local(cls):
         prev_chain = get_block_data()
 
+        # Not revalidating because of pruned nodes
         if prev_chain is False:
             return cls()
 

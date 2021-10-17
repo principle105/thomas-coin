@@ -16,9 +16,6 @@ class State:
         self.length += 1
         self.last_block = block
 
-        # if block.forger not in self.validators:
-        #     self.validators[""]
-
         for t in block.transactions:
             sender = self.get_wallet(t.sender)
             receiver = self.get_wallet(t.receiver)

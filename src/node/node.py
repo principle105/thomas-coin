@@ -316,32 +316,6 @@ class Node(threading.Thread):
                     for block in chain:
                         self.chain.add_block(block)
 
-    def block_staking_valid(self, address: str):
-        difficulty = self.chain.calculate_next_difficulty() + 1
-
-        timestamp = time.time()
-
-        prev = self.chain.state.last_block.hash
-
-        balance = int(self.chain.get_balance(address))
-
-        # Checking if block does not require coins to mint
-        if self.chain.state.length - 1 <= NO_COIN_AMOUNT:
-            balance += 1
-
-        data_hash = hashlib.sha256(f"{prev}{address}{timestamp}".encode()).hexdigest()
-        ratio = (2 ^ 256) * balance / difficulty
-
-        print(int(data_hash, 16), "\n", ratio)
-
-        return int(data_hash, 16) <= ratio
-
-    def start_validating(self, wallet: Wallet):
-        while True:
-            result = self.block_staking_valid(wallet.address)
-            print(result)
-            break
-
     def message_from_node(self, node, data):
         if list(data.keys()) != ["type", "data"]:
             return
