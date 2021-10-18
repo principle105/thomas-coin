@@ -81,16 +81,21 @@ def node():
 
             amt = float(input("Amount: "))
 
+            tip = float(input("Tip: ") or 0)
+
             t = chain.create_trans(wallet, adr, amt, 0)
 
             if chain.add_pending(t):
                 node.send_transaction(t.get_json())
 
-        elif a in ["mine", "validate"]:
-            node.start_validating(wallet)
-
         elif a == "pending":
             print(chain.pending)
+
+        elif a == "fetch":
+            print(chain.fetch_transactions())
+
+        elif a == "validate":
+            chain.forge_block(wallet)
 
         elif a == "bal":
             address = input("Address: ") or wallet.address

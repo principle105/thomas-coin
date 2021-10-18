@@ -26,9 +26,9 @@ class Block:
         index: int,
         prev: str,
         forger: str,
+        difficulty: int,
         timestamp: float = None,
         transactions: list[Transaction] = [],
-        difficulty: int = None,
         signature: str = None,
         hash: str = None,
     ):
@@ -42,8 +42,11 @@ class Block:
         self.forger = forger
 
         self.timestamp = timestamp
+
         self.transactions = transactions
+
         self.difficulty = difficulty
+
         self.signature = signature
 
         if hash is None:
@@ -115,6 +118,10 @@ class Block:
             if self.get_json() != GENESIS_BLOCK_DATA:
                 return False
 
+            return False
+
+        # Checking if the block difficulty is correct
+        if chain_state.calculate_next_difficulty() != self.difficulty:
             return False
 
         # Checking if the block comes after the last block in the chain

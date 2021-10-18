@@ -121,7 +121,7 @@ class Transaction:
         wallet = chain_state.wallets.get(self.sender, None)
 
         # Checking if the sender has enough coins to create the transaction
-        if wallet is None or wallet.balance < self.amount:
+        if wallet is None or wallet.balance < self.amount + self.tip:
             return False
 
         # Checking if nonce is invalid

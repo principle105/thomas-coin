@@ -1,12 +1,13 @@
 import os
 import time
 import _pickle as pickle
+from itertools import islice
 from wallet import Wallet
 from .transaction import Transaction
 from .block import Block
-from config import BLOCK_PATH
-from constants import GENESIS_BLOCK_DATA
 from .state import State
+from config import BLOCK_PATH
+from constants import GENESIS_BLOCK_DATA, MAX_BLOCK_SIZE
 
 
 def get_block_data():
@@ -145,17 +146,46 @@ class Blockchain:
         for p in self.pending:
             # Only using sender because wallet cannot use output that it hasn't received yet
             if p["sender"] == address:
-                bal -= p["amount"]
+                bal -= p["amount"] + p["tip"]
 
         return bal
 
-    # Based off: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2.md
-    def calculate_next_difficulty(self) -> int:
-        """Calculates the difficulty of the next block"""
-        return int(
-            self.state.last_block.difficulty
-            + self.state.last_block.difficulty
-            // 2048
-            * max(1 - (time.time() - self.state.last_block.timestamp) // 10, -99)
-            + int(2 ** ((self.state.length // 100000) - 2))
+    def fetch_transactions(self, count: int = MAX_BLOCK_SIZE):
+        count = min(count, len(self.pending))
+        return sorted(
+            islice(
+                sorted(
+                    self.pending,
+                    key=lambda t: t["tip"],
+                    reverse=True,
+                ),
+                count,
+            ),
+            key=lambda t: t["nonce"],
         )
+
+    def create_new_block(self, forger: str):
+        """Creates a new unsigned block from pending transactions"""
+        last_block = self.state.last_block
+        transactions = list(self._get_transactions(MAX_BLOCK_SIZE))
+        difficulty = self.state.calculate_next_difficulty()
+
+        block = Block(
+            index=last_block.index,
+            prev=last_block.hash,
+            forger=forger,
+            transactions=transactions,
+            difficulty=difficulty,
+        )
+
+        return block
+
+    def forge_block(self, wallet: Wallet):
+        # Creating an unsigned block
+        block = self.create_new_block(wallet.address)
+
+        # Signing the block
+        block.sign(wallet)
+
+        # Adding it to our chain
+        self.chain.add_block(block)

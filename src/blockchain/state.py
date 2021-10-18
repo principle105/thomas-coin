@@ -1,3 +1,4 @@
+import time
 from .block import Block
 from wallet import Other_Wallet
 
@@ -30,3 +31,14 @@ class State:
             self.wallets[address] = Other_Wallet(address)
 
         return self.wallets[address]
+
+    # Based off: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2.md
+    def calculate_next_difficulty(self) -> int:
+        """Calculates the difficulty of the next block"""
+        return int(
+            self.last_block.difficulty
+            + self.last_block.difficulty
+            // 2048
+            * max(1 - (time.time() - self.last_block.timestamp) // 10, -99)
+            + int(2 ** ((self.length // 100000) - 2))
+        )
