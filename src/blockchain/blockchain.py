@@ -1,5 +1,4 @@
 import os
-import time
 import _pickle as pickle
 from itertools import islice
 from wallet import Wallet
@@ -46,8 +45,8 @@ class Blockchain:
 
         # Removing the block transactions from pending
         for t in block.transactions:
-            if t in self.pending:
-                self.pending.remove(t)
+            if (tj := t.get_json()) in self.pending:
+                self.pending.remove(tj)
 
         self.state.add_block(block)
 
@@ -94,7 +93,6 @@ class Blockchain:
 
         # Incrementing the nonce
         wallet = self.state.get_wallet(transaction.sender)
-        wallet.nonce += 1
 
         # Saving as json to allow for checking duplicates (doesn't work with classes)
         self.pending.append(json_t)
@@ -164,14 +162,25 @@ class Blockchain:
             key=lambda t: t["nonce"],
         )
 
+    def convert_tx_to_objects(self, transaction: list[dict]) -> list[Transaction]:
+        txs = []
+        for t in transaction:
+            txs.append(Transaction.from_json(**t))
+
+        return txs
+
     def create_new_block(self, forger: str):
         """Creates a new unsigned block from pending transactions"""
         last_block = self.state.last_block
-        transactions = list(self._get_transactions(MAX_BLOCK_SIZE))
+
+        transactions = self.convert_tx_to_objects(
+            list(self.fetch_transactions(MAX_BLOCK_SIZE))
+        )
+
         difficulty = self.state.calculate_next_difficulty()
 
         block = Block(
-            index=last_block.index,
+            index=last_block.index + 1,
             prev=last_block.hash,
             forger=forger,
             transactions=transactions,
@@ -188,4 +197,4 @@ class Blockchain:
         block.sign(wallet)
 
         # Adding it to our chain
-        self.chain.add_block(block)
+        self.add_block(block)

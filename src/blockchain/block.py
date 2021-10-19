@@ -66,9 +66,7 @@ class Block:
         return data
 
     def get_transactions_as_json(self):
-        data = sorted(
-            [t.get_json() for t in self.transactions], key=lambda t: t["timestamp"]
-        )
+        data = sorted([t.get_json() for t in self.transactions], key=lambda t: t["nonce"])
         return data
 
     def get_hash(self) -> None:
@@ -105,8 +103,9 @@ class Block:
 
     def validate(self, chain_state: "State"):
         """Validates the block"""
+
         # Checking if the block has a signature
-        if self.signature is None:
+        if not self.signature:
             return False
 
         if chain_state.length == 0:
@@ -117,7 +116,6 @@ class Block:
             # Checking if the genesis block is valid
             if self.get_json() != GENESIS_BLOCK_DATA:
                 return False
-
             return False
 
         # Checking if the block difficulty is correct
@@ -127,14 +125,14 @@ class Block:
         # Checking if the block comes after the last block in the chain
         if self.index != chain_state.length:
             return False
-
+    
         # Checking if the timestamp is valid
         # If timestamp is over 1 minute before last block was created
         if self.timestamp + 60 < chain_state.last_block.timestamp:
             return False
 
         # Checking the previous hash
-        if self.prev != chain_state.last_block:
+        if self.prev != chain_state.last_block.hash:
             return False
 
         # Checking if signature is verified and matches block data

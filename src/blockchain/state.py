@@ -23,6 +23,8 @@ class State:
 
             # Updating the wallet balance
             sender.balance -= t.amount
+            sender.nonce += 1
+            
             receiver.balance += t.amount + t.tip
 
     def get_wallet(self, address: str):

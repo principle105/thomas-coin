@@ -83,7 +83,7 @@ def node():
 
             tip = float(input("Tip: ") or 0)
 
-            t = chain.create_trans(wallet, adr, amt, 0)
+            t = chain.create_trans(wallet, adr, amt, tip)
 
             if chain.add_pending(t):
                 node.send_transaction(t.get_json())
@@ -91,10 +91,12 @@ def node():
         elif a == "pending":
             print(chain.pending)
 
-        elif a == "fetch":
-            print(chain.fetch_transactions())
+        elif a == "chain":
+            for b in chain.blocks:
+                print(b.get_json())
 
         elif a == "validate":
+            print("Validating")
             chain.forge_block(wallet)
 
         elif a == "bal":
