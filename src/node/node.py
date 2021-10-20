@@ -4,11 +4,9 @@ import socket
 import time
 import random
 import json
-from wallet import Wallet
 from .node_connection import Node_Connection
 from blockchain import Blockchain, Transaction, Block
 from config import UNL_PATH, MIN_TIP
-from constants import NO_COIN_AMOUNT
 
 
 def get_unl():

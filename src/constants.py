@@ -1,3 +1,5 @@
+from ecdsa.curves import SECP256k1
+
 GENESIS_BLOCK_DATA = {
     "index": 0,
     "prev": "0",
@@ -19,6 +21,8 @@ GENESIS_BLOCK_DATA = {
     "hash": "84ca05ed450e3dfc77c2da4680c9bbeb39ee36389c00de8cb64fd6539c4b2d27",
     "signature": "0",
 }
+CURVE = SECP256k1
+
 MAX_BLOCK_SIZE = 50  # transactions
 MAX_TRANSACTION_SIZE = 700  # characters
 

@@ -1,11 +1,10 @@
 import ecdsa
 import time
 from hashlib import sha256
-from ecdsa.curves import SECP256k1
 from base64 import b64encode, b64decode
 from base58 import b58decode
 from wallet import Wallet
-from constants import MAX_TRANSACTION_SIZE
+from constants import MAX_TRANSACTION_SIZE, CURVE
 from typing import TYPE_CHECKING
 
 # To avoid circular imports
@@ -61,9 +60,7 @@ class Transaction:
 
     @property
     def sender_vk(self) -> ecdsa.VerifyingKey:
-        return ecdsa.VerifyingKey.from_string(
-            b58decode(self.sender[1:]), curve=SECP256k1
-        )
+        return ecdsa.VerifyingKey.from_string(b58decode(self.sender[1:]), curve=CURVE)
 
     def get_json(self):
         data = {

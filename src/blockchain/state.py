@@ -17,6 +17,10 @@ class State:
         self.length += 1
         self.last_block = block
 
+        forger = self.get_wallet(block.forger)
+
+        forger.balance += block.reward
+
         for t in block.transactions:
             sender = self.get_wallet(t.sender)
             receiver = self.get_wallet(t.receiver)
@@ -24,8 +28,11 @@ class State:
             # Updating the wallet balance
             sender.balance -= t.amount
             sender.nonce += 1
-            
-            receiver.balance += t.amount + t.tip
+
+            receiver.balance += t.amount
+
+            # Adding transaction tip to forger
+            forger.balance += t.tip
 
     def get_wallet(self, address: str):
         if address not in self.wallets:

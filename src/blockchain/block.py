@@ -1,13 +1,13 @@
 import time
 import json
 import ecdsa
-from ecdsa.curves import SECP256k1
 from wallet import Wallet
 from constants import (
     GENESIS_BLOCK_DATA,
     MAX_BLOCK_SIZE,
     ISSUE_CHANGE_INTERVAL,
     MAX_COINS,
+    CURVE,
 )
 from hashlib import sha256
 from base64 import b64encode, b64decode
@@ -28,6 +28,7 @@ class Block:
         forger: str,
         difficulty: int,
         timestamp: float = None,
+        reward: float = None,
         transactions: list[Transaction] = [],
         signature: str = None,
         hash: str = None,
@@ -47,6 +48,11 @@ class Block:
 
         self.difficulty = difficulty
 
+        if reward is None:
+            reward = self.calculate_reward()
+
+        self.reward = reward
+
         self.signature = signature
 
         if hash is None:
@@ -61,12 +67,15 @@ class Block:
             "forger": self.forger,
             "timestamp": self.timestamp,
             "difficulty": self.difficulty,
+            "reward": self.reward,
             "transactions": self.get_transactions_as_json(),
         }
         return data
 
     def get_transactions_as_json(self):
-        data = sorted([t.get_json() for t in self.transactions], key=lambda t: t["nonce"])
+        data = sorted(
+            [t.get_json() for t in self.transactions], key=lambda t: t["nonce"]
+        )
         return data
 
     def get_hash(self) -> None:
@@ -85,9 +94,7 @@ class Block:
 
     @property
     def forger_vk(self) -> ecdsa.VerifyingKey:
-        return ecdsa.VerifyingKey.from_string(
-            b58decode(self.forger[1:]), curve=SECP256k1
-        )
+        return ecdsa.VerifyingKey.from_string(b58decode(self.forger[1:]), curve=CURVE)
 
     def is_signature_verified(self) -> bool:
         """Checks if the block signature is valid"""
@@ -103,11 +110,6 @@ class Block:
 
     def validate(self, chain_state: "State"):
         """Validates the block"""
-
-        # Checking if the block has a signature
-        if not self.signature:
-            return False
-
         if chain_state.length == 0:
             return False
 
@@ -118,14 +120,22 @@ class Block:
                 return False
             return False
 
+        # Checking if the block has a signature
+        if not self.signature:
+            return False
+
         # Checking if the block difficulty is correct
         if chain_state.calculate_next_difficulty() != self.difficulty:
+            return False
+
+        # Checking if reward amount is correct
+        if self.reward != self.calculate_reward():
             return False
 
         # Checking if the block comes after the last block in the chain
         if self.index != chain_state.length:
             return False
-    
+
         # Checking if the timestamp is valid
         # If timestamp is over 1 minute before last block was created
         if self.timestamp + 60 < chain_state.last_block.timestamp:
@@ -157,9 +167,8 @@ class Block:
 
         return (
             MAX_COINS
-            / 2
+            / 2 ** ((self.index + 1) // ISSUE_CHANGE_INTERVAL + 1)
             / ISSUE_CHANGE_INTERVAL
-            / (int(self.index + 1 / ISSUE_CHANGE_INTERVAL) + 1)
         )
 
     @classmethod
