@@ -1,10 +1,11 @@
 import typer
 import getpass
 import requests
-from typer.colors import BRIGHT_YELLOW, BRIGHT_BLUE
+from typer.colors import BRIGHT_YELLOW, BLUE
 from wallet import Wallet
 from node import Node
 from blockchain import Blockchain
+from consensus.lottery import do_lottery
 
 app = typer.Typer()
 
@@ -19,13 +20,12 @@ def wallet():
     secret = input("Wallet secret: ")
     if not secret:
         secret = None
+        print("Generating new address")
 
-    i = 0
-    while True:
-        wallet = Wallet(secret=secret)
+    wallet = Wallet(secret=secret)
 
-        typer.secho(f"ADDRESS: {wallet.address}", fg=BRIGHT_BLUE)
-        typer.secho(f"PRIVATE KEY: {wallet.private_key}", fg=BRIGHT_YELLOW)
+    typer.secho(f"ADDRESS: {wallet.address}", fg=BLUE)
+    typer.secho(f"PRIVATE KEY: {wallet.private_key}", fg=BRIGHT_YELLOW)
 
 
 @app.command()
@@ -71,6 +71,10 @@ def node():
         if a == "connect":
             node.connect_to_unl_nodes()
 
+        elif a == "test":
+            winner = do_lottery(chain.state, wallet.address)
+            print(winner)
+
         elif a == "connect-single":
             host = input("Host: ") or "127.0.0.1"
             port = int(input("Port: ") or 3000)
@@ -88,6 +92,9 @@ def node():
             if chain.add_pending(t):
                 node.send_transaction(t.get_json())
 
+        elif a == "deposit":
+            pass
+
         elif a == "pending":
             print(chain.pending)
 
@@ -97,7 +104,10 @@ def node():
 
         elif a == "validate":
             print("Validating")
-            chain.forge_block(wallet)
+            block = chain.forge_block(wallet)
+
+            # Broadcasting it to other nodes
+            node.send_data_to_nodes("block", block.get_json())
 
         elif a == "bal":
             address = input("Address: ") or wallet.address

@@ -10,7 +10,7 @@ if __name__ == "__main__":
     )
     t.signature = "0"
 
-    b = Block(index=0, prev="0", forger="0", difficulty=4, transactions=[t])
+    b = Block(index=0, prev="0", forger="GENESIS", difficulty=4, transactions=[t])
     b.signature = "0"
 
     print(b.get_json())

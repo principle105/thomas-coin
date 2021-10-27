@@ -37,6 +37,9 @@ class Blockchain:
         self.blocks = []
         self.add_block(self.get_genesis_block(), False)
 
+        self.penalty = 0
+        self.sum_tree = None
+
     def add_block(self, block: Block, validate: bool = True, save: bool = True):
         if validate:
             # Checking if the block is valid
@@ -197,4 +200,7 @@ class Blockchain:
         block.sign(wallet)
 
         # Adding it to our chain
-        self.add_block(block)
+        if self.add_block(block):
+            return block
+
+        return None

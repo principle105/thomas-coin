@@ -5,9 +5,9 @@ from wallet import Other_Wallet
 
 class State:
     def __init__(self):
-        self.wallets = {}  # "address": balance
+        self.wallets = {}  # "address": wallet
 
-        self.validators = {}  # "address": amount
+        self.validators = {}  # "address": signed_stake
 
         self.length = 0
 
@@ -17,22 +17,25 @@ class State:
         self.length += 1
         self.last_block = block
 
-        forger = self.get_wallet(block.forger)
-
-        forger.balance += block.reward
+        total_tips = 0
 
         for t in block.transactions:
-            sender = self.get_wallet(t.sender)
             receiver = self.get_wallet(t.receiver)
 
             # Updating the wallet balance
-            sender.balance -= t.amount
-            sender.nonce += 1
+            if t.sender != "GENESIS":
+                sender = self.get_wallet()
+                sender.balance -= t.amount
+                sender.nonce += 1
 
             receiver.balance += t.amount
 
             # Adding transaction tip to forger
-            forger.balance += t.tip
+            total_tips += t.tip
+
+        if block.forger != "GENESIS":
+            forger = self.get_wallet(block.forger)
+            forger.balance += block.reward + total_tips
 
     def get_wallet(self, address: str):
         if address not in self.wallets:

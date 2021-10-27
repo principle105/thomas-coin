@@ -3,9 +3,10 @@ from ecdsa.curves import SECP256k1
 GENESIS_BLOCK_DATA = {
     "index": 0,
     "prev": "0",
-    "forger": "0",
-    "timestamp": 1634510723.853075,
+    "forger": "GENESIS",
+    "timestamp": 1635138318.75742,
     "difficulty": 4,
+    "reward": 0,
     "transactions": [
         {
             "sender": "GENESIS",
@@ -14,13 +15,15 @@ GENESIS_BLOCK_DATA = {
             "tip": 0,
             "nonce": 0,
             "signature": "0",
-            "timestamp": 1634510723.85303,
-            "hash": "2ac9b90767b21098b4fd005b4a37056445f24e826fda8f1aa467a2fa0a6b99da",
+            "timestamp": 1635138318.757374,
+            "hash": "85df2718e0344dcae1a66e21debefb14be3309212d42f9b3f5ad9b9c33843eb5",
         }
     ],
-    "hash": "84ca05ed450e3dfc77c2da4680c9bbeb39ee36389c00de8cb64fd6539c4b2d27",
+    "hash": "4638821efddac5c388d27e3cda292fb0001bb0b436158c53e3cfade68f4e31ec",
     "signature": "0",
 }
+
+# Elliptic curve used to generate addresses
 CURVE = SECP256k1
 
 MAX_BLOCK_SIZE = 50  # transactions
