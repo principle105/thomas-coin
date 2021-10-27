@@ -37,3 +37,6 @@ ISSUE_CHANGE_INTERVAL = 10000
 
 # Amount of initial blocks that do not require to be minted with coins
 NO_COIN_AMOUNT = 100
+
+# Initial lottery number
+INITIAL_NUMBER = 1

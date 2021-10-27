@@ -37,10 +37,8 @@ class Blockchain:
         self.blocks = []
         self.add_block(self.get_genesis_block(), False)
 
-        self.penalty = 0
-        self.sum_tree = None
-
     def add_block(self, block: Block, validate: bool = True, save: bool = True):
+
         if validate:
             # Checking if the block is valid
             if block.validate(self.state) is False:

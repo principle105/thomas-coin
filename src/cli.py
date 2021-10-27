@@ -5,7 +5,7 @@ from typer.colors import BRIGHT_YELLOW, BLUE
 from wallet import Wallet
 from node import Node
 from blockchain import Blockchain
-from consensus.lottery import do_lottery
+from consensus import do_lottery
 
 app = typer.Typer()
 
@@ -72,7 +72,7 @@ def node():
             node.connect_to_unl_nodes()
 
         elif a == "test":
-            winner = do_lottery(chain.state, wallet.address)
+            winner = do_lottery(chain.state)
             print(winner)
 
         elif a == "connect-single":

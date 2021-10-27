@@ -1,6 +1,8 @@
 import time
 from .block import Block
 from wallet import Other_Wallet
+from consensus import get_lottery_number
+from constants import INITIAL_NUMBER
 
 
 class State:
@@ -13,9 +15,14 @@ class State:
 
         self.last_block: Block = None
 
+        self.lottery_number = INITIAL_NUMBER
+
     def add_block(self, block: Block):
         self.length += 1
         self.last_block = block
+
+        # Updating lottery number with block forger
+        self.lottery_number = get_lottery_number(block.forger)
 
         total_tips = 0
 
@@ -24,7 +31,7 @@ class State:
 
             # Updating the wallet balance
             if t.sender != "GENESIS":
-                sender = self.get_wallet()
+                sender = self.get_wallet(t.sender)
                 sender.balance -= t.amount
                 sender.nonce += 1
 

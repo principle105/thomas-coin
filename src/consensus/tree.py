@@ -1,7 +1,5 @@
 # Idea from: https://medium.com/kleros/an-efficient-data-structure-for-blockchain-sortition-15d202af3247
 # Kleros - Clément Lesaege
-
-
 class Leaf:
     def __init__(self, left=None, right=None, adr=None, value=0):
         # Children

@@ -1,5 +1,5 @@
 from functools import lru_cache
-from .sum_tree import Sum_Tree
+from .tree import Leaf
 from base64 import b64encode
 from constants import CURVE
 
@@ -12,17 +12,17 @@ def get_lottery_number(address):
 
 # Caching to prevent having to recompute winner
 @lru_cache(maxsize=1)
-def find_winner(tree: Sum_Tree, n: int):
+def find_winner(tree: Leaf, n: int):
     search_number = n * tree.sum
     winner = tree.search(search_number)
     return winner
 
 
-def do_lottery(chain_state, address):
-    wallets = chain_state.wallets
-    data = {w: wallets[w].balance for w in wallets}
-    print("DATA", data)
+def do_lottery(chain_state):
+    if len(chain_state.validators) == 0:
+        return None
 
-    tree = Sum_Tree.from_json(data)
-    n = get_lottery_number(address)
-    return find_winner(tree, n)
+    # Creating sortition tree
+    tree = Leaf.plant_tree(chain_state.validators)
+    # Finding winner from lottery number
+    return find_winner(tree, chain_state.lottery_number)
