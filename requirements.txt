@@ -4,3 +4,5 @@ typer
 requests
 base58
 black
+fastapi
+uvicorn[standard]
