@@ -110,6 +110,24 @@ class Block:
 
     def validate(self, chain_state: "State"):
         """Validates the block"""
+
+        # Checking the type
+        if not all(isinstance(i, int) for i in [self.difficulty, self.index]):
+            return False
+
+        if not all(isinstance(i, float) for i in [self.timestamp, self.reward]):
+            return False
+
+        if not all(
+            isinstance(i, str)
+            for i in [self.prev, self.forger, self.signature, self.hash]
+        ):
+            return False
+
+        if not isinstance(self.transactions, list):
+            return False
+
+        # Checking if chain state doesn't contain genesis
         if chain_state.length == 0:
             return False
 
@@ -160,6 +178,8 @@ class Block:
 
         return True
 
+    # Based of bitcoin
+    # Source: https://www.oreilly.com/library/view/mastering-bitcoin/9781491902639/ch08.html
     def calculate_reward(self):
         """Calculates the reward for the block forger"""
         if self.index == 0:

@@ -94,20 +94,31 @@ class Transaction:
             return False
 
     def validate(self, chain_state: "State"):
+        # Checking if transactions are the correct type
+        if not all(
+            isinstance(i, [float, int]) for i in [self.amount, self.tip, self.timestamp]
+        ):
+            return False
+
+        if not all(
+            isinstance(i, str)
+            for i in [self.sender, self.receiver, self.signature, self.hash]
+        ):
+            return False
+
+        if not isinstance(self.nonce, int):
+            return False
+
         # Checking if transaction exceeds character limit
         if len(str(self.get_json())) > MAX_TRANSACTION_SIZE:
             return False
 
         # Checking if amount is valid
-        if type(self.amount) not in [int, float] or self.amount < 0:
+        if self.amount < 0:
             return False
 
         # Checking if amount is valid
-        if type(self.tip) not in [int, float] or self.tip < 0:
-            return False
-
-        # Checking if the block has a signature
-        if self.signature is None:
+        if self.tip < 0:
             return False
 
         # Checking if the signature is valid and matches transaction data

@@ -92,9 +92,6 @@ class Blockchain:
         if json_t in self.pending:
             return False
 
-        # Incrementing the nonce
-        wallet = self.state.get_wallet(transaction.sender)
-
         # Saving as json to allow for checking duplicates (doesn't work with classes)
         self.pending.append(json_t)
 
@@ -202,3 +199,7 @@ class Blockchain:
             return block
 
         return None
+
+    def add_staker(self, staker):
+        if staker.validate(self.state):
+            self.state.validators[staker.address] = staker

@@ -18,7 +18,7 @@ class Leaf:
     def search(self, num):
         prev = self.value
 
-        # Checkign if node has any children
+        # Checking if node has any children
         if self.left and self.right:
 
             s, l = self.left, self.right
@@ -38,10 +38,7 @@ class Leaf:
         return self.adr
 
     @classmethod
-    def grow_branches(cls, data):
-        """
-        values: list[Leaf]
-        """
+    def grow_branches(cls, data: list["Leaf"]):
         b = []
         # Groups leaves
         for i in range(0, len(data), 2):
@@ -60,7 +57,7 @@ class Leaf:
     @classmethod
     def plant_tree(cls, data: dict):
         leaves = [
-            cls(value=v, adr=a)
+            cls(value=v.stake, adr=a)
             for a, v in sorted(data.items(), key=lambda i: i[1], reverse=True)
         ]
 

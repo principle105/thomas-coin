@@ -4,8 +4,8 @@ import requests
 from typer.colors import BRIGHT_YELLOW, BLUE
 from wallet import Wallet
 from node import Node
-from blockchain import Blockchain
-from consensus import do_lottery
+from blockchain import Blockchain, Transaction
+from consensus import Stake, do_lottery
 
 app = typer.Typer()
 
@@ -71,7 +71,7 @@ def node():
         if a == "connect":
             node.connect_to_unl_nodes()
 
-        elif a == "test":
+        elif a == "winner":
             winner = do_lottery(chain.state)
             print(winner)
 
@@ -81,7 +81,8 @@ def node():
             node.connect_to_node(host, port)
 
         elif a == "send":
-            adr = input("Receiver Address: ")
+            # adr = input("Receiver Address: ")
+            adr = None
 
             amt = float(input("Amount: "))
 
@@ -93,7 +94,12 @@ def node():
                 node.send_transaction(t.get_json())
 
         elif a == "deposit":
-            pass
+            amt = int(input("How much stake: "))
+
+            stake = Stake(wallet.address, amt)
+            stake.sign(wallet)
+
+            chain.add_staker(stake)
 
         elif a == "pending":
             print(chain.pending)

@@ -9,7 +9,7 @@ class State:
     def __init__(self):
         self.wallets = {}  # "address": wallet
 
-        self.validators = {}  # "address": signed_stake
+        self.validators = {}  # "address": Stake
 
         self.length = 0
 

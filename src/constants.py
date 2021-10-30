@@ -40,3 +40,6 @@ NO_COIN_AMOUNT = 100
 
 # Initial lottery number
 INITIAL_NUMBER = 1
+
+# Minimum amount that can be staked
+MIN_STAKE = 1
