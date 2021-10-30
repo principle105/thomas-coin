@@ -18,6 +18,7 @@ class Stake:
             hash = self.get_hash()
 
         self.hash = hash
+        self.signature = signature
 
     def get_hash(self):
         data = f"{self.address}{self.stake}"
@@ -44,7 +45,7 @@ class Stake:
         # Checking types
         if not all(
             isinstance(i, str) for i in [self.address, self.hash, self.signature]
-        ):
+        ):  
             return False
 
         if not isinstance(self.stake, int):
@@ -65,6 +66,15 @@ class Stake:
             return False
 
         return True
+
+    def get_json(self):
+        data = {
+            "address": self.address,
+            "stake": self.stake,
+            "hash": self.hash,
+            "signature": self.signature,
+        }
+        return data
 
     @classmethod
     def from_json(cls, address, stake, hash, signature):

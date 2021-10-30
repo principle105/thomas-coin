@@ -96,7 +96,7 @@ class Transaction:
     def validate(self, chain_state: "State"):
         # Checking if transactions are the correct type
         if not all(
-            isinstance(i, [float, int]) for i in [self.amount, self.tip, self.timestamp]
+            isinstance(i, (float, int)) for i in [self.amount, self.tip, self.timestamp]
         ):
             return False
 

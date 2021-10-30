@@ -127,6 +127,8 @@ class Block:
         if not isinstance(self.transactions, list):
             return False
 
+        # TODO: check if the forger has the right to validate the block
+
         # Checking if chain state doesn't contain genesis
         if chain_state.length == 0:
             return False

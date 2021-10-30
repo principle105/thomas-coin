@@ -18,3 +18,4 @@
 "block" - Block in the blockchain
 "newtrans" - Transaction
 "pending" - Pending transaction
+"stakers" - List of stakers

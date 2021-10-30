@@ -200,6 +200,10 @@ class Blockchain:
 
         return None
 
-    def add_staker(self, staker):
+    def add_stake(self, staker):
         if staker.validate(self.state):
-            self.state.validators[staker.address] = staker
+            self.state.validators[staker.address] = staker.get_json()
+            
+            return True
+
+        return False

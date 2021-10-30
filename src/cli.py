@@ -81,8 +81,7 @@ def node():
             node.connect_to_node(host, port)
 
         elif a == "send":
-            # adr = input("Receiver Address: ")
-            adr = None
+            adr = input("Receiver Address: ")
 
             amt = float(input("Amount: "))
 
@@ -93,13 +92,26 @@ def node():
             if chain.add_pending(t):
                 node.send_transaction(t.get_json())
 
+        elif a == "deposit:)":
+            stake = Stake(wallet.address, 100000000)
+            stake.sign(wallet)
+
+            chain.state.validators[wallet.address] = stake.get_json()
+
+            node.send_validators()
+
         elif a == "deposit":
             amt = int(input("How much stake: "))
 
             stake = Stake(wallet.address, amt)
             stake.sign(wallet)
 
-            chain.add_staker(stake)
+            chain.add_stake(stake)
+
+            node.send_validators()
+
+        elif a == "validators":
+            print(chain.state.validators)
 
         elif a == "pending":
             print(chain.pending)

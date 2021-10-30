@@ -6,6 +6,7 @@ import random
 import json
 from .node_connection import Node_Connection
 from blockchain import Blockchain, Transaction, Block
+from consensus import Stake
 from config import UNL_PATH, MIN_TIP
 
 
@@ -253,6 +254,28 @@ class Node(threading.Thread):
         # Sending the transaction data to all the nodes
         self.send_data_to_nodes("newtrans", data)
 
+    def send_validators(self):
+        self.send_data_to_nodes("stakers", self.chain.state.validators)
+
+    def receive_stakers(self, node, data: dict):
+        if data == self.chain.state.validators:
+            return
+
+        added_new = False
+
+        for m in data:
+            try:
+                s = Stake.from_json(**data[m])
+            except:
+                pass
+            else:
+                if self.chain.add_stake(s):
+                    added_new = True
+
+        if added_new:
+            # Broadcasting valid pending transaction to other nodes except original
+            self.send_data_to_nodes("stakers", self.chain.state.validators, [node])
+
     def receive_new_transaction(self, node, data: dict):
         # Validating the new transaction against current chain
         try:
@@ -335,6 +358,9 @@ class Node(threading.Thread):
 
         elif data["type"] == "pending":
             self.receive_pending(node, data["data"])
+
+        elif data["type"] == "stakers":
+            self.receive_stakers(node, data["data"])
 
         # Checking if node is a full node
         if self.full_node == True:
