@@ -13,7 +13,7 @@ def get_lottery_number(address):
 # Caching to prevent having to recompute winner
 @lru_cache(maxsize=1)
 def find_winner(tree: Leaf, n: int):
-    search_number = n * tree.sum
+    search_number = n * tree.value
     winner = tree.search(search_number)
     return winner
 

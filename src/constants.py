@@ -41,5 +41,10 @@ NO_COIN_AMOUNT = 100
 # Initial lottery number
 INITIAL_NUMBER = 1
 
-# Minimum amount that can be staked
-MIN_STAKE = 1
+# Minimum amount of coins that can be staked
+# Staking fee is subtracted from staking amount
+STAKE_FEE = 2
+
+# Maximum amount of stake that will affect the lottery
+# (prevent a few individuals from holding the most power)
+MAX_AFFECTING_STAKE = 32

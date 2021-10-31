@@ -4,7 +4,7 @@ from base58 import b58decode
 from base64 import b64encode, b64decode
 from wallet import Wallet
 from hashlib import sha256
-from constants import CURVE, MIN_STAKE
+from constants import CURVE, STAKE_FEE
 
 
 class Stake:
@@ -45,7 +45,7 @@ class Stake:
         # Checking types
         if not all(
             isinstance(i, str) for i in [self.address, self.hash, self.signature]
-        ):  
+        ):
             return False
 
         if not isinstance(self.stake, int):
@@ -55,8 +55,8 @@ class Stake:
         if self.is_signature_verified() is False:
             return False
 
-        # Checking if staking amount is valid
-        if MIN_STAKE > self.stake:
+        # Checking if staking amount is above staking fee
+        if STAKE_FEE >= self.stake:
             return False
 
         # Checking if wallet has enough to stake

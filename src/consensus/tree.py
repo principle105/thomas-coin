@@ -1,3 +1,5 @@
+from constants import MAX_AFFECTING_STAKE
+
 # Idea from: https://medium.com/kleros/an-efficient-data-structure-for-blockchain-sortition-15d202af3247
 # Kleros - Clément Lesaege
 class Leaf:
@@ -57,8 +59,8 @@ class Leaf:
     @classmethod
     def plant_tree(cls, data: dict):
         leaves = [
-            cls(value=v.stake, adr=a)
-            for a, v in sorted(data.items(), key=lambda i: i[1], reverse=True)
+            cls(value=min(v["stake"], MAX_AFFECTING_STAKE), adr=a)
+            for a, v in sorted(data.items(), key=lambda i: i[1]["stake"], reverse=True)
         ]
 
         return cls.grow_branches(leaves)

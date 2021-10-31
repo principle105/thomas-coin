@@ -243,8 +243,11 @@ class Node(threading.Thread):
         # Getting nodes that we are connected to from unl
         unl_list = self.get_connected_unl()
         if unl_list:
-            # Requesting block from first unl node
+            # Requesting blocks from first unl node
             self.send_data_to_node(unl_list[0], "sendchain", {})
+
+            # Requesting validators from first unl node
+            self.send_data_to_node(unl_list[0], "sendstakers", {})
 
     def send_chain(self, node):
         # Sending the entire blockchain minus the genesis block
@@ -256,6 +259,9 @@ class Node(threading.Thread):
 
     def send_validators(self):
         self.send_data_to_nodes("stakers", self.chain.state.validators)
+
+    def send_stakers(self, node):
+        self.send_data_to_node(node, "stakers", self.chain.state.validators)
 
     def receive_stakers(self, node, data: dict):
         if data == self.chain.state.validators:
@@ -361,6 +367,9 @@ class Node(threading.Thread):
 
         elif data["type"] == "stakers":
             self.receive_stakers(node, data["data"])
+
+        elif data["type"] == "sendstakers":
+            self.send_stakers(node)
 
         # Checking if node is a full node
         if self.full_node == True:

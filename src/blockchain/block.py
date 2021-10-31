@@ -14,6 +14,7 @@ from base64 import b64encode, b64decode
 from base58 import b58decode
 from typing import TYPE_CHECKING
 from .transaction import Transaction
+from consensus import do_lottery
 
 # To avoid circular imports
 if TYPE_CHECKING:
@@ -127,7 +128,9 @@ class Block:
         if not isinstance(self.transactions, list):
             return False
 
-        # TODO: check if the forger has the right to validate the block
+        # check if the forger has the right to validate the block
+        if do_lottery(chain_state) != self.forger:
+            return False
 
         # Checking if chain state doesn't contain genesis
         if chain_state.length == 0:

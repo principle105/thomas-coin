@@ -41,6 +41,7 @@ class State:
             total_tips += t.tip
 
         if block.forger != "GENESIS":
+            # TODO: Wait 15 days before adding balance to forger
             forger = self.get_wallet(block.forger)
             forger.balance += block.reward + total_tips
 

@@ -4,7 +4,7 @@ import requests
 from typer.colors import BRIGHT_YELLOW, BLUE
 from wallet import Wallet
 from node import Node
-from blockchain import Blockchain, Transaction
+from blockchain import Blockchain
 from consensus import Stake, do_lottery
 
 app = typer.Typer()
@@ -123,6 +123,8 @@ def node():
         elif a == "validate":
             print("Validating")
             block = chain.forge_block(wallet)
+            if block is None:
+                break
 
             # Broadcasting it to other nodes
             node.send_data_to_nodes("block", block.get_json())
