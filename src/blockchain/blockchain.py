@@ -27,15 +27,15 @@ class Blockchain:
 
         self.pruned = pruned
 
-        # Keeps track of various stats
-        self.state = State()
-
         # Blocks that are pending to be added to the blockchain
         self.pending: list[Block] = []
 
+        # Keeps track of various stats
+        self.state = State()
+
         # Adding the genesis block
         self.blocks = []
-        self.add_block(self.get_genesis_block(), False)
+        self.add_block(self.get_genesis_block(), save=False)
 
     def add_block(self, block: Block, validate: bool = True, save: bool = True):
 
@@ -203,6 +203,9 @@ class Blockchain:
     def add_stake(self, staker):
         if staker.validate(self.state):
             self.state.validators[staker.address] = staker.get_json()
+
+            # Saving the blockchain locally
+            self.save_locally()
 
             return True
 

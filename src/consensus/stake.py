@@ -22,8 +22,7 @@ class Stake:
 
     def get_hash(self):
         data = f"{self.address}{self.stake}"
-        block_string = json.dumps(data, sort_keys=True).encode()
-        return sha256(block_string).hexdigest()
+        return sha256(data.encode()).hexdigest()
 
     def sign(self, wallet: Wallet):
         self.signature = b64encode(wallet.sk.sign(self.hash.encode())).decode()
@@ -42,13 +41,16 @@ class Stake:
             return False
 
     def validate(self, chain_state):
+        # Control decimal at 5 points
+        self.stake = round(self.stake, 5)
+
         # Checking types
         if not all(
             isinstance(i, str) for i in [self.address, self.hash, self.signature]
         ):
             return False
 
-        if not isinstance(self.stake, int):
+        if not isinstance(self.stake, (float, int)):
             return False
 
         # Checking if signature matches

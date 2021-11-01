@@ -4,7 +4,7 @@ GENESIS_BLOCK_DATA = {
     "index": 0,
     "prev": "0",
     "forger": "GENESIS",
-    "timestamp": 1635138318.75742,
+    "timestamp": 1635732093.6019998,
     "difficulty": 4,
     "reward": 0,
     "transactions": [
@@ -12,14 +12,15 @@ GENESIS_BLOCK_DATA = {
             "sender": "GENESIS",
             "receiver": "T26nNx7Ai2Je4EnXGKGPnXcEHqNntMhewnZFpJYhXjozWF",
             "amount": 10000.0,
-            "tip": 0,
+            "tip": 0.0,
             "nonce": 0,
+            "data": "",
             "signature": "0",
-            "timestamp": 1635138318.757374,
-            "hash": "85df2718e0344dcae1a66e21debefb14be3309212d42f9b3f5ad9b9c33843eb5",
+            "timestamp": 1635732093.6016371,
+            "hash": "d76ce9be52f5bfcf249387843d9f628bb2596fc4b7e35c857e1a6362ed124605",
         }
     ],
-    "hash": "4638821efddac5c388d27e3cda292fb0001bb0b436158c53e3cfade68f4e31ec",
+    "hash": "6510b53a5727f455a7c2a879401935e9d172ad8eb310c69c09323a0f11eab11a",
     "signature": "0",
 }
 

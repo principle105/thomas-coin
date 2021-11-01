@@ -21,6 +21,7 @@ class Transaction:
         tip: float,
         nonce: int,
         timestamp: float = None,
+        data: str = "",
         signature: str = None,
         hash: str = None,
     ):
@@ -31,9 +32,9 @@ class Transaction:
         tip: transaction tip
         nonce: account nonce
         timestamp: timestamp of transaction (seconds since the epoch)
+        data: data that the sender wants to include
         signature: proves that sender approved the transaction
         hash: transaction hash
-        sender: sender address
         """
 
         if timestamp is None:
@@ -51,6 +52,8 @@ class Transaction:
 
         self.nonce = nonce
 
+        self.data = data
+
         self.signature = signature
 
         if hash is None:
@@ -67,8 +70,9 @@ class Transaction:
             "sender": self.sender,
             "receiver": self.receiver,
             "amount": self.amount,
-            "tip": 0,
+            "tip": self.tip,
             "nonce": self.nonce,
+            "data": self.data,
             "signature": self.signature,
             "timestamp": self.timestamp,
             "hash": self.hash,
@@ -76,7 +80,7 @@ class Transaction:
         return data
 
     def get_raw_transaction_string(self):
-        return f"{self.sender}{self.receiver}{self.tip}{self.amount}{self.timestamp}{self.nonce}"
+        return f"{self.sender}{self.receiver}{self.tip}{self.amount}{self.timestamp}{self.nonce}{self.data}"
 
     def get_hash(self) -> str:
         data = self.get_raw_transaction_string().encode()
@@ -94,18 +98,23 @@ class Transaction:
             return False
 
     def validate(self, chain_state: "State"):
+        # Control decimal at 5 points
+        self.amount = round(self.amount, 5)
+        self.tip = round(self.tip, 5)
+
         # Checking if transactions are the correct type
         if not all(
             isinstance(i, (float, int)) for i in [self.amount, self.tip, self.timestamp]
-        ):
+        ):  
             return False
 
         if not all(
             isinstance(i, str)
-            for i in [self.sender, self.receiver, self.signature, self.hash]
+            for i in [self.sender, self.receiver, self.signature, self.hash, self.data]
         ):
             return False
 
+        
         if not isinstance(self.nonce, int):
             return False
 
@@ -147,6 +156,7 @@ class Transaction:
         tip,
         nonce,
         timestamp,
+        data,
         signature,
         hash,
     ):
@@ -157,6 +167,7 @@ class Transaction:
             tip=float(tip),
             nonce=nonce,
             timestamp=timestamp,
+            data=data,
             signature=signature,
             hash=hash,
         )

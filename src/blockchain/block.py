@@ -112,11 +112,18 @@ class Block:
     def validate(self, chain_state: "State"):
         """Validates the block"""
 
+        # Checking if the block is the genesis block
+        if self.index == chain_state.length == 0:
+            # Checking if the genesis block is valid
+            if self.get_json() != GENESIS_BLOCK_DATA:
+                return False
+            return True
+
         # Checking the type
         if not all(isinstance(i, int) for i in [self.difficulty, self.index]):
             return False
 
-        if not all(isinstance(i, float) for i in [self.timestamp, self.reward]):
+        if not all(isinstance(i, (float, int)) for i in [self.timestamp, self.reward]):
             return False
 
         if not all(
@@ -127,20 +134,13 @@ class Block:
 
         if not isinstance(self.transactions, list):
             return False
-
+        
         # check if the forger has the right to validate the block
         if do_lottery(chain_state) != self.forger:
             return False
 
         # Checking if chain state doesn't contain genesis
         if chain_state.length == 0:
-            return False
-
-        # Checking if the block is the genesis block
-        if self.index == chain_state.length - 1 == 0:
-            # Checking if the genesis block is valid
-            if self.get_json() != GENESIS_BLOCK_DATA:
-                return False
             return False
 
         # Checking if the block has a signature
@@ -190,10 +190,11 @@ class Block:
         if self.index == 0:
             return 0
 
-        return (
+        return round(
             MAX_COINS
             / 2 ** ((self.index + 1) // ISSUE_CHANGE_INTERVAL + 1)
-            / ISSUE_CHANGE_INTERVAL
+            / ISSUE_CHANGE_INTERVAL,
+            5,
         )
 
     @classmethod

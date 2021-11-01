@@ -101,7 +101,7 @@ def node():
             node.send_validators()
 
         elif a == "deposit":
-            amt = int(input("How much stake: "))
+            amt = float(input("How much stake: "))
 
             stake = Stake(wallet.address, amt)
             stake.sign(wallet)

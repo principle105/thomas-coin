@@ -17,10 +17,8 @@ def get_unl():
 
 def compare_chains(other_chain: list[Block], our_chain: list[Block]):
     our_chain = our_chain.blocks
-    """
-    Validates a list of blocks against our blockchain
-    """
 
+    # Validating list of blocks aginast our blockchain
     for i in range(len(our_chain)):
         if other_chain[i].get_json() != our_chain[i].get_json():
             return False
@@ -30,8 +28,6 @@ def compare_chains(other_chain: list[Block], our_chain: list[Block]):
 
 # Based on https://github.com/macsnoeren/python-p2p-network
 class Node(threading.Thread):
-    main_node = None
-
     def __init__(
         self,
         host: str,
@@ -40,8 +36,6 @@ class Node(threading.Thread):
         max_connections: int = 0,
         full_node: bool = True,
     ):
-
-        self.__class__.main_node = self
 
         super(Node, self).__init__()
 
