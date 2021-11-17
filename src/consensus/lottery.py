@@ -24,5 +24,6 @@ def do_lottery(chain_state):
 
     # Creating sortition tree
     tree = Leaf.plant_tree(chain_state.validators)
+
     # Finding winner from lottery number
     return find_winner(tree, chain_state.lottery_number)

@@ -105,7 +105,7 @@ class Transaction:
         # Checking if transactions are the correct type
         if not all(
             isinstance(i, (float, int)) for i in [self.amount, self.tip, self.timestamp]
-        ):  
+        ):
             return False
 
         if not all(
@@ -114,7 +114,6 @@ class Transaction:
         ):
             return False
 
-        
         if not isinstance(self.nonce, int):
             return False
 

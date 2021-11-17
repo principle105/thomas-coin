@@ -1,4 +1,3 @@
-import json
 import ecdsa
 from base58 import b58decode
 from base64 import b64encode, b64decode

@@ -124,8 +124,7 @@ def node():
             print("Validating")
             block = chain.forge_block(wallet)
             if block is None:
-                break
-
+                continue
             # Broadcasting it to other nodes
             node.send_data_to_nodes("block", block.get_json())
 

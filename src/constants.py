@@ -36,9 +36,6 @@ MAX_COINS = 100000
 # Interval of blocks until coins issued per block is changed
 ISSUE_CHANGE_INTERVAL = 10000
 
-# Amount of initial blocks that do not require to be minted with coins
-NO_COIN_AMOUNT = 100
-
 # Initial lottery number
 INITIAL_NUMBER = 1
 
@@ -49,3 +46,7 @@ STAKE_FEE = 2
 # Maximum amount of stake that will affect the lottery
 # (prevent a few individuals from holding the most power)
 MAX_AFFECTING_STAKE = 32
+
+# Amount of time between each block
+# TODO: Calculate the block time based on current efficiency of network
+BLOCK_INTERVAL = 20  # seconds

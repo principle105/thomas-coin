@@ -210,3 +210,6 @@ class Blockchain:
             return True
 
         return False
+
+    def get_lottery_score(self):
+        return self.state.get_lottery_score()

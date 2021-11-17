@@ -1,5 +1,6 @@
 from blockchain import Block, Transaction
 
+# Creating the genesis block
 if __name__ == "__main__":
     t = Transaction(
         sender="GENESIS",

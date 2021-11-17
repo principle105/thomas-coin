@@ -1,7 +1,7 @@
 import time
 from .block import Block
 from wallet import Other_Wallet
-from consensus import get_lottery_number
+from consensus import get_lottery_number, do_lottery
 from constants import INITIAL_NUMBER
 
 
@@ -62,3 +62,6 @@ class State:
             * max(1 - (time.time() - self.last_block.timestamp) // 10, -99)
             + int(2 ** ((self.length // 100000) - 2))
         )
+
+    def get_lottery_score(self):
+        return do_lottery(self)

@@ -30,7 +30,7 @@ class Block:
         difficulty: int,
         timestamp: float = None,
         reward: float = None,
-        transactions: list[Transaction] = [],
+        transactions: list[Transaction] = None,
         signature: str = None,
         hash: str = None,
     ):
@@ -45,6 +45,8 @@ class Block:
 
         self.timestamp = timestamp
 
+        if transactions is None:
+            transactions = []
         self.transactions = transactions
 
         self.difficulty = difficulty
@@ -79,7 +81,7 @@ class Block:
         )
         return data
 
-    def get_hash(self) -> None:
+    def get_hash(self):
         data = self.get_raw_data()
         block_string = json.dumps(data, sort_keys=True).encode()
         return sha256(block_string).hexdigest()
@@ -112,13 +114,6 @@ class Block:
     def validate(self, chain_state: "State"):
         """Validates the block"""
 
-        # Checking if the block is the genesis block
-        if self.index == chain_state.length == 0:
-            # Checking if the genesis block is valid
-            if self.get_json() != GENESIS_BLOCK_DATA:
-                return False
-            return True
-
         # Checking the type
         if not all(isinstance(i, int) for i in [self.difficulty, self.index]):
             return False
@@ -134,7 +129,14 @@ class Block:
 
         if not isinstance(self.transactions, list):
             return False
-        
+
+        # Checking if the block is the genesis block
+        if self.index == chain_state.length == 0:
+            # Checking if the genesis block is valid
+            if self.get_json() != GENESIS_BLOCK_DATA:
+                return False
+            return True
+
         # check if the forger has the right to validate the block
         if do_lottery(chain_state) != self.forger:
             return False

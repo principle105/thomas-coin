@@ -6,7 +6,7 @@ import random
 import json
 from .node_connection import Node_Connection
 from blockchain import Blockchain, Transaction, Block
-from consensus import Stake
+from consensus import Stake, Validator
 from config import UNL_PATH, MIN_TIP
 
 
@@ -60,6 +60,8 @@ class Node(threading.Thread):
 
         # If the node is a full node
         self.full_node = full_node
+
+        self.validator = Validator(chain)
 
         # Start the TCP/IP server
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -233,6 +235,12 @@ class Node(threading.Thread):
         self.sock.settimeout(None)
         self.sock.close()
 
+    def start_validating(self):
+        self.validator.start()
+
+    def stop_validating(self):
+        self.validator.stop()
+
     def request_chain(self):
         # Getting nodes that we are connected to from unl
         unl_list = self.get_connected_unl()
@@ -366,7 +374,7 @@ class Node(threading.Thread):
             self.send_stakers(node)
 
         # Checking if node is a full node
-        if self.full_node == True:
+        if self.full_node:
             if data["type"] == "sendchain":
                 # Checking if node is pruned
                 if self.chain.pruned:
