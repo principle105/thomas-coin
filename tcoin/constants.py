@@ -1,0 +1,38 @@
+from ecdsa.curves import SECP256k1
+
+# Wallets
+CURVE = SECP256k1
+PREFIX = "T"
+
+# Currency details
+MIN_SEND_AMT = 1  # minimum amount of coins that can be sent in a transaction
+
+
+# Messages
+MAX_TIP_AGE = 60 * 60  # maximum age before an unverified tip is purged
+MAX_PARENTS = 8  # maximum amount of parents a message can have
+MIN_STRONG_PARENTS = 1  # minimum amount of strong parents a message must have
+MAX_MSG_SIZE = 4096  # maximum size of a message in bytes
+MAX_PARENT_AGE = 60 * 60  # maximum age a parent can be older than a child message
+
+# Pow
+MAX_NONCE = 2**32
+BASE_DIFFICULTY = 18
+GAMMA = 0.2
+TIME_WINDOW = 1000 * 1000  # ms
+
+# Genesis Message
+GENESIS_MSG_DATA = {
+    "node_id": "0",
+    "value": "transaction",
+    "payload": {
+        "receiver": "TmANJZAiiZTjBiLZt2QDKoYVtLn8yHGPdXdydymbPVJDZ",
+        "amt": 25000,
+        "index": 0,
+    },
+    "parents": {},
+    "timestamp": 1653266909.9701052,
+    "nonce": 0,
+    "hash": "0",
+    "signature": "0",
+}

@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "thomas-coin"
+version = "0.1.0"
+description = "The final currency"
+authors = ["principle105 <principle105@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [
+    { include = "tcoin"}
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+ecdsa = "^0.18.0"
+base58 = "^2.1.1"
+black = "^22.8.0"
+isort = "^5.10.1"
+typer = "^0.6.1"
+inquirerpy = "^0.3.4"
+yaspin = "^2.2.0"
+objsize = "^0.5.2"
+PyYAML = "^6.0"
+
+[tool.poetry.scripts]
+tcoin = "tcoin.cli.main:app"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
