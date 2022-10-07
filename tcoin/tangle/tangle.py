@@ -14,7 +14,6 @@ from tcoin.utils import load_storage_file, save_storage_file
 from .messages import Message, Transaction, genesis_msg, message_lookup
 
 TANGLE_PATH = "tangle"
-STATE_PATH = "state"
 
 
 class TangleState:
@@ -95,17 +94,6 @@ class TangleState:
 
         self.wallets[t.receiver] = receiver_bal + t.amt
 
-    def to_dict(self):
-        return {
-            "strong_tips": self.strong_tips,
-            "weak_tips": self.weak_tips,
-            "wallets": self.wallets,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict):
-        return cls(**data)
-
 
 class Tangle:
     def __init__(self, msgs: dict[str, Message] = {}, state: TangleState = None):
@@ -183,19 +171,28 @@ class Tangle:
         return {_id: m.to_dict() for _id, m in self.msgs.items()}
 
     @classmethod
-    def from_dict(cls, tangle_data: dict, state_data: dict):
-        msgs = {_id: message_lookup(msg) for _id, msg in tangle_data.items()}
-        state = TangleState.from_dict(state_data)
+    def from_dict(cls, tangle_data: dict):
+        tangle = cls()
 
-        return cls(msgs, state)
+        for m_data in reversed(tangle_data.values()):
+            msg = message_lookup(m_data)
+
+            if msg is None:
+                continue
+
+            if msg.hash in tangle.msgs:
+                continue
+
+            # Not validating the message as it is already in the tangle
+            tangle.add_msg(msg)
+
+        return tangle
 
     def save(self):
         save_storage_file(TANGLE_PATH, self.to_dict_msgs())
-        save_storage_file(STATE_PATH, self.state.to_dict())
 
     @classmethod
     def from_save(cls):
         tangle_data = load_storage_file(TANGLE_PATH)
-        state_data = load_storage_file(STATE_PATH)
 
-        return cls.from_dict(tangle_data, state_data)
+        return cls.from_dict(tangle_data)

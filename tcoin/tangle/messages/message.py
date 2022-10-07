@@ -3,7 +3,12 @@ import time
 from typing import TYPE_CHECKING
 
 from objsize import get_deep_size
-from tcoin.constants import MAX_MSG_SIZE, MAX_PARENT_AGE, MAX_PARENTS
+from tcoin.constants import (
+    MAX_MSG_SIZE,
+    MAX_PARENT_AGE,
+    MAX_PARENTS,
+    MIN_STRONG_PARENTS,
+)
 from tcoin.utils import check_var_types, get_pow_hash, get_target, is_valid_hash, pow
 
 from ..signed import Signed
@@ -151,7 +156,10 @@ class Message(SignedPayload):
                     (self.node_id, str),
                     (self.payload, dict),
                     (self.parents, dict),
+                    (self.nonce, int),
                     (self.timestamp, float),
+                    (self.hash, str),
+                    (self.signature, str),
                 )
             )
             is False
@@ -189,6 +197,10 @@ class Message(SignedPayload):
         if self.is_signature_valid is False:
             return False
 
+        # Checking if there are enough strong parents
+        if list(self.parents.values()).count(0) < MIN_STRONG_PARENTS:
+            return False
+
         if len(self.parents) > MAX_PARENTS:
             return False
 
@@ -213,6 +225,8 @@ class Message(SignedPayload):
         unknown_parents = set()
 
         parent_range = range(0, MAX_PARENT_AGE + 1)
+
+        # TODO: validate if parents are strong or weak
 
         # Checking the validity of each parent
         for p, t in self.parents.items():

@@ -39,8 +39,8 @@ class Node(Thread):
         self.wallet = wallet
 
         # Connections
-        self.nodes_inbound = []
-        self.nodes_outbound = []
+        self.nodes_inbound = {}
+        self.nodes_outbound = {}
 
         # Other nodes that are known about
         self.other_nodes = {}
@@ -56,7 +56,7 @@ class Node(Thread):
 
     @property
     def all_nodes(self):
-        return self.nodes_inbound + self.nodes_outbound
+        return {**self.nodes_inbound, **self.nodes_outbound}
 
     @property
     def id(self):
@@ -72,12 +72,12 @@ class Node(Thread):
         self.terminate_flag.set()
 
     def send_to_nodes(self, data: dict, exclude: list[str] = []):
-        for n in self.all_nodes:
-            if n not in exclude:
+        for _id, n in self.all_nodes.items():
+            if _id not in exclude:
                 self.send_to_node(n, data)
 
     def send_to_node(self, node: NodeConnection, data: dict):
-        if node in self.all_nodes:
+        if node.id in self.all_nodes:
             node.send(data)
 
     def get_known_nodes(self):
@@ -93,9 +93,6 @@ class Node(Thread):
             for host, port in random.sample(list(saved_nodes.values()), amt):
                 self.connect_to_node(host, port)
 
-    def sync_tangle(self):
-        ...
-
     def create_message(self, msg_cls, payload: dict):
         return msg_cls(node_id=self.id, payload=payload)
 
@@ -108,22 +105,18 @@ class Node(Thread):
         return request
 
     def save_all_nodes(self):
-        data = self.get_known_nodes()
+        outbound_data = {
+            _id: [n.host, n.port] for _id, n in self.nodes_outbound.items()
+        }
 
-        for n in self.nodes_outbound:
-            data[n.id] = [n.host, n.port]
-
-        for i, (host, port) in self.other_nodes.items():
-            data[i] = [host, port]
-
-        save_storage_file(KNOWN_PEERS_FILE_NAME, data)
+        save_storage_file(KNOWN_PEERS_FILE_NAME, {**outbound_data, **self.other_nodes})
 
     def connect_to_node(self, host: str, port: int):
         if host == self.host and port == self.port:
             logging.info("You cannot connect with yourself")
             return False
 
-        if any(n.host == host and n.port == port for n in self.nodes_outbound):
+        if any(n.host == host and n.port == port for n in self.nodes_outbound.values()):
             logging.info("You are already connected with that node")
 
         try:
@@ -142,7 +135,7 @@ class Node(Thread):
             )
             thread_client.start()
 
-            self.nodes_outbound.append(thread_client)
+            self.nodes_outbound[connected_node_id] = thread_client
 
         except Exception:
             logging.debug("Could not connect with node")
@@ -156,12 +149,12 @@ class Node(Thread):
     def create_new_connection(self, sock: socket.socket, id: str, host: str, port: int):
         return NodeConnection(main_node=self, sock=sock, id=id, host=host, port=port)
 
-    def node_disconnected(self, node):
-        if node in self.nodes_inbound:
-            self.nodes_inbound.remove(node)
+    def node_disconnected(self, node: NodeConnection):
+        if node.id in self.nodes_inbound:
+            del self.nodes_inbound[node.id]
 
-        if node in self.nodes_outbound:
-            self.nodes_outbound.remove(node)
+        if node.id in self.nodes_outbound:
+            del self.nodes_outbound[node.id]
 
     def message_from_node(self, node: NodeConnection, data: dict):
         # Handling if the data is a request
@@ -214,6 +207,7 @@ class Node(Thread):
         callback = self.request_callback_pool.get(request.hash, None)
 
         if callback is not None:
+            del self.request_callback_pool[request.hash]
             callback(node)
 
     def handle_new_message(self, node: NodeConnection, data: dict, propagate=True):
@@ -222,10 +216,13 @@ class Node(Thread):
         if msg is None:
             return
 
+        if msg.hash in self.tangle.msgs:
+            return False
+
         result = msg.is_valid(self.tangle)
 
         if result is False:
-            return
+            return False
 
         invalid_parents = []
 
@@ -247,6 +244,7 @@ class Node(Thread):
                 return True
 
         if self.tangle.get_msg(msg.hash) is None:
+
             # Checking if the payload is valid all parents are known about
             if msg.is_payload_valid(self.tangle) is False:
                 self.tangle.state.add_invalid_msg(msg.hash)
@@ -257,7 +255,7 @@ class Node(Thread):
 
             # Propagating message to other nodes
             if propagate:
-                self.send_to_nodes(data, exclude=[node])
+                self.send_to_nodes(data, exclude=[node.id])
 
         return True
 
@@ -284,7 +282,7 @@ class Node(Thread):
                     )
                     thread_client.start()
 
-                    self.nodes_inbound.append(thread_client)
+                    self.nodes_inbound[connected_node_id] = thread_client
 
                 else:
                     logging.debug("Reached maximum connection limit")
@@ -298,12 +296,12 @@ class Node(Thread):
 
             time.sleep(0.01)
 
-        for node in self.all_nodes:
+        for node in self.all_nodes.values():
             node.stop()
 
         time.sleep(1)
 
-        for node in self.all_nodes:
+        for node in self.all_nodes.values():
             node.join()
 
         self.sock.settimeout(None)

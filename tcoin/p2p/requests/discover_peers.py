@@ -12,7 +12,7 @@ class DiscoverPeers(Request):
     value = "discover-peers"
 
     def respond(self, client, node):
-        nodes = {n.id: [n.host, n.port] for n in client.nodes_outbound}
+        nodes = {_id: [n.host, n.port] for _id, n in client.nodes_outbound.items()}
 
         nodes.update(client.other_nodes)
 

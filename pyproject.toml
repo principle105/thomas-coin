@@ -20,6 +20,7 @@ inquirerpy = "^0.3.4"
 yaspin = "^2.2.0"
 objsize = "^0.5.2"
 PyYAML = "^6.0"
+pyfiglet = "^0.8.post1"
 
 [tool.poetry.scripts]
 tcoin = "tcoin.cli.main:app"

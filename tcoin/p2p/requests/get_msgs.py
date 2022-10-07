@@ -1,3 +1,4 @@
+import random
 from typing import TYPE_CHECKING
 
 from tcoin.config import max_tips_requested
@@ -29,7 +30,7 @@ class GetMsgs(Request):
             return None
 
         if len(tips) > max_tips_requested:
-            tips = tips[:max_tips_requested]
+            tips = random.sample(tips, max_tips_requested)
 
         if history:
             children = {}
@@ -41,8 +42,9 @@ class GetMsgs(Request):
                     continue
 
                 for _id, msg in children.values():
-                    if _id not in children:
-                        children[_id] = msg.to_dict()
+                    if _id in children:
+                        continue
+                    children[_id] = msg.to_dict()
 
         else:
             children = {}
@@ -55,13 +57,16 @@ class GetMsgs(Request):
         return children
 
     def receive(self, client: "Node", node: "Node"):
-        # TODO: do some validation
         msgs = self.response
 
         if msgs is None:
             return
 
-        for m in msgs.values():
+        for _id, m in msgs.items():
+            # Checking if the message was requested
+            if _id not in self.payload.get("msgs", []):
+                continue
+
             if m is None:
                 continue
 

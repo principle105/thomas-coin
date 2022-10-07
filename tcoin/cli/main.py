@@ -4,6 +4,7 @@ from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
 from InquirerPy.utils import color_print
 from InquirerPy.validator import EmptyInputValidator
+from pyfiglet import figlet_format
 from tcoin.constants import MIN_SEND_AMT
 from tcoin.p2p.nodes import Node
 from tcoin.tangle import Tangle
@@ -26,8 +27,12 @@ class Send:
         color_print([("red", text)])
 
     @staticmethod
-    def important(text: str):
+    def primary(text: str):
         color_print([("#f6ca44", text)])
+
+    @staticmethod
+    def secondary(text: str):
+        color_print([("#4470f6", text)])
 
     @staticmethod
     def regular(text: str):
@@ -48,22 +53,11 @@ def handle_pk_input(secret: str):
     return wallet
 
 
-@app.command()
-def wallet():
-    secret = inquirer.secret(
-        message="Wallet Secret:",
-        instruction="(blank to create new)",
-    ).execute()
-
-    if not secret:
-        secret = None
-
-    wallet = handle_pk_input(secret)
-
-    if wallet is None:
-        return
-
-    Send.important(f"ADDRESS: {wallet.address}\nPRIVATE KEY: {wallet.pk}")
+def node_stats(_, node: Node):
+    Send.primary(
+        f"Inbound Connections: {len(node.nodes_inbound)}\n"
+        f"Outbound Connections: {len(node.nodes_outbound)}"
+    )
 
 
 def send(tangle: Tangle, node: Node):
@@ -85,9 +79,6 @@ def send(tangle: Tangle, node: Node):
 
     amount = int(amount)
 
-    index = inquirer.number(message="Index:").execute()
-
-    # Getting the transaction index
     index = tangle.get_transaction_index(node.wallet.address)
 
     # Constructing the transaction
@@ -123,7 +114,7 @@ def send(tangle: Tangle, node: Node):
         node.send_to_nodes(msg.to_dict())
 
     Send.success("Transaction Broadcasted")
-    Send.important(f"Message Hash: {msg.hash}")
+    Send.primary(f"Message Hash: {msg.hash}")
 
 
 def connect(_, node: Node):
@@ -156,7 +147,7 @@ def view_balance(tangle: Tangle, node: Node):
 
 
 def view_address(_, node: Node):
-    Send.important(f"Your Address: {node.wallet.address}")
+    Send.primary(f"Your Address: {node.wallet.address}")
 
 
 def view_msg(tangle: Tangle, _):
@@ -205,6 +196,7 @@ def start():
 
     with Send.spinner("Starting Node") as sp:
         tangle = Tangle.from_save()
+        sp.write("- Loaded tangle from save")
 
         node = Node(
             host=host,
@@ -221,15 +213,11 @@ def start():
 
         sp.write("- Connected to the network")
 
-        # TODO: Sync the tangle
-        node.sync_tangle()
-
-        sp.write("- Tangle synced")
-
         sp.ok("✔")
 
     choices = {
         "Connect": connect,
+        "Node Stats": node_stats,
         "View Address": view_address,
         "Balance": view_balance,
         "Send": send,
@@ -261,6 +249,34 @@ def start():
     node.save_all_nodes()
 
     tangle.save()
+
+
+@app.command()
+def wallet():
+    secret = inquirer.secret(
+        message="Wallet Secret:",
+        instruction="(blank to create new)",
+    ).execute()
+
+    if not secret:
+        secret = None
+
+    wallet = handle_pk_input(secret)
+
+    if wallet is None:
+        return
+
+    Send.primary(f"ADDRESS: {wallet.address}\nPRIVATE KEY: {wallet.pk}")
+
+
+@app.command()
+def info():
+    Send.primary(
+        figlet_format("Thomas Coin")
+        + '"The final currency"\n\nThomas coin is a lightweight DAG-based cryptocurrency designed for everyday applications.'
+    )
+
+    Send.secondary("\nGithub Repository: https://github.com/principle105/thomas-coin")
 
 
 if __name__ == "__main__":
