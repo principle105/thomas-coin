@@ -41,7 +41,10 @@ class NodeConnection(Thread):
     def send(self, data: dict):
         send_data = self.compress(json.dumps(data).encode()) + EOT_CHAR
 
-        self.sock.sendall(send_data)
+        try:
+            self.sock.sendall(send_data)
+        except Exception:
+            self.stop()
 
     def parse_packet(self, packet):
         packet = self.decompress(packet)

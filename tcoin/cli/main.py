@@ -74,6 +74,7 @@ def send(tangle: Tangle, node: Node):
         message="Amount:",
         min_allowed=MIN_SEND_AMT,
         max_allowed=balance,
+        default=None,
         validate=EmptyInputValidator(),
     ).execute()
 
