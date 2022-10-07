@@ -13,8 +13,6 @@ packages = [
 python = "^3.9"
 ecdsa = "^0.18.0"
 base58 = "^2.1.1"
-black = "^22.8.0"
-isort = "^5.10.1"
 typer = "^0.6.1"
 inquirerpy = "^0.3.4"
 yaspin = "^2.2.0"
@@ -24,6 +22,10 @@ pyfiglet = "^0.8.post1"
 
 [tool.poetry.scripts]
 tcoin = "tcoin.cli.main:app"
+
+[tool.poetry.group.dev.dependencies]
+black = "^22.10.0"
+isort = "^5.10.1"
 
 [build-system]
 requires = ["poetry-core"]
