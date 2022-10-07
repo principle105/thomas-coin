@@ -60,6 +60,24 @@ def node_stats(_, node: Node):
     )
 
 
+def tangle_stats(tangle: Tangle, _):
+    msg_amt = len(tangle.msgs)
+
+    t_amt = 0
+    sent = 0
+
+    for t in tangle.msgs.values():
+        if isinstance(t, Transaction):
+            sent += t.get_transaction().amt
+            t_amt += 1
+
+    Send.primary(
+        f"Total Messages: {msg_amt}\n"
+        f"Total Transactions: {t_amt}\n"
+        f"Total Sent: {sent}"
+    )
+
+
 def send(tangle: Tangle, node: Node):
     balance = tangle.get_balance(node.wallet.address)
 
@@ -105,7 +123,7 @@ def send(tangle: Tangle, node: Node):
 
     msg.sign(node.wallet)
 
-    # Checking if the message is valid
+    # # Checking if the message is valid
     if msg.is_valid(tangle) is False:
         return Send.fail("Invalid transaction!")
 
@@ -219,6 +237,7 @@ def start():
     choices = {
         "Connect": connect,
         "Node Stats": node_stats,
+        "Tangle Stats": tangle_stats,
         "View Address": view_address,
         "Balance": view_balance,
         "Send": send,
