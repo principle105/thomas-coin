@@ -13,7 +13,7 @@ class Request(SignedPayload):
         *,
         node_id: str,
         payload: dict,
-        timestamp: float = None,
+        timestamp: int = None,
         hash: str = None,
         signature: str = None,
         response: dict = None,

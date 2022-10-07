@@ -1,7 +1,7 @@
 import random
 import time
 
-from tcoin.config import invalid_msg_pool_size
+from tcoin.config import invalid_msg_pool_purge_time, invalid_msg_pool_size
 from tcoin.constants import (
     BASE_DIFFICULTY,
     GAMMA,
@@ -38,6 +38,13 @@ class TangleState:
         if in_pool:
             # Updating the access time
             self.add_invalid_msg(msg_hash)
+
+        # Purging invalid messages that haven't been accessed in a while
+        self.invalid_msg_pool = {
+            _id: t
+            for _id, t in self.invalid_msg_pool.items()
+            if t + invalid_msg_pool_purge_time >= time.time()
+        }
 
         # Purging the oldest invalid messages
         self.invalid_msg_pool = dict(

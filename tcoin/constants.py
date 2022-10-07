@@ -31,7 +31,7 @@ GENESIS_MSG_DATA = {
         "index": 0,
     },
     "parents": {},
-    "timestamp": 1653266909.9701052,
+    "timestamp": 1653266909,
     "nonce": 0,
     "hash": "0",
     "signature": "0",

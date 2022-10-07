@@ -58,7 +58,7 @@ class SignedPayload(Signed):
         *,
         node_id: str,
         payload: dict,
-        timestamp: float = None,
+        timestamp: int = None,
         hash: str = None,
         signature: str = None
     ):
@@ -69,7 +69,7 @@ class SignedPayload(Signed):
         self.payload = payload
 
         if timestamp is None:
-            timestamp = time.time()
+            timestamp = int(time.time())
 
         self.timestamp = timestamp
 
@@ -109,7 +109,7 @@ class Message(SignedPayload):
         payload: dict,
         parents: dict[str, bool] = [],
         nonce: int = None,
-        timestamp: float = None,
+        timestamp: int = None,
         hash: str = None,
         signature: str = None
     ):
@@ -157,7 +157,7 @@ class Message(SignedPayload):
                     (self.payload, dict),
                     (self.parents, dict),
                     (self.nonce, int),
-                    (self.timestamp, float),
+                    (self.timestamp, int),
                     (self.hash, str),
                     (self.signature, str),
                 )
@@ -226,19 +226,21 @@ class Message(SignedPayload):
 
         parent_range = range(0, MAX_PARENT_AGE + 1)
 
-        # TODO: validate if parents are strong or weak
-
         # Checking the validity of each parent
         for p, t in self.parents.items():
+            p_msg = tangle.get_msg(p)
+
             # Ignoring validation if the parent is weak
             if t == 1:
-                continue
+                # Checking if the parent is falsely weak
+                if p_msg is not None:
+                    invalid_parents.add(p)
+                else:
+                    continue
 
             if tangle.state.in_invalid_pool(p):
                 invalid_parents.add(p)
                 continue
-
-            p_msg = tangle.get_msg(p)
 
             # Checking if the message exists on the tangle
             if p_msg is not None:
@@ -248,7 +250,7 @@ class Message(SignedPayload):
                 # Validating the parent's timestamp if it's not the genesis
                 if (
                     p_msg.hash != genesis_msg.hash
-                    and math.ceil(self.timestamp - p_msg.timestamp) not in parent_range
+                    and self.timestamp - p_msg.timestamp not in parent_range
                 ):
                     invalid_parents.add(p)
 

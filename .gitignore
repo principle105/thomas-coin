@@ -6,6 +6,7 @@ __pycache__/
 venv
 .vscode
 requirements.txt
+poetry.toml
 
 # Storage
 storage
