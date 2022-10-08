@@ -123,7 +123,7 @@ def send(tangle: Tangle, node: Node):
 
     msg.sign(node.wallet)
 
-    # # Checking if the message is valid
+    # Checking if the message is valid
     if msg.is_valid(tangle) is False:
         return Send.fail("Invalid transaction!")
 

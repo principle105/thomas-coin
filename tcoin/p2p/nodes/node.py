@@ -1,6 +1,7 @@
 import logging
 import random
 import socket
+import string
 import time
 from threading import Event, Thread
 
@@ -124,11 +125,10 @@ class Node(Thread):
             logging.debug(f"Connecting to {host} port {port}")
             sock.connect((host, port))
 
-            # Sending our id to other node
-            sock.send(self.id.encode("utf-8"))
+            connected_node_id = self.receive_connection(sock)
 
-            # Receiving the node id once complete
-            connected_node_id = sock.recv(4096).decode("utf-8")
+            if connected_node_id is None:
+                return
 
             thread_client = self.create_new_connection(
                 sock, connected_node_id, host, port
@@ -259,6 +259,41 @@ class Node(Thread):
 
         return True
 
+    def receive_connection(self, sock: socket.socket):
+        try:
+            random_string = "".join(random.choices(string.ascii_letters, k=16))
+
+            # Sending our id to other node
+            sock.send(f"{self.id}:{random_string}".encode("utf-8"))
+
+            # Receiving the other node's  id and random string
+            result = sock.recv(4096).decode("utf-8")
+
+            connected_node_id, other_random_string = result.split(":")
+
+            # Signing the random string
+            signature = self.wallet.sign(other_random_string)
+
+            # Sending the signature
+            sock.send(signature.encode("utf-8"))
+
+            # Receiving the other node's signature
+            random_string_signature = sock.recv(4096).decode("utf-8")
+
+            # Checking if the node id is valid
+            if (
+                Wallet.is_signature_valid(
+                    connected_node_id, random_string_signature, random_string
+                )
+                is False
+            ):
+                return None
+
+            return connected_node_id
+
+        except Exception:
+            return None
+
     def run(self):
         while not self.terminate_flag.is_set():
             try:
@@ -270,9 +305,10 @@ class Node(Thread):
                     or len(self.nodes_inbound) < self.max_connections
                 ):
 
-                    connected_node_id = connection.recv(4096).decode("utf-8")
+                    connected_node_id = self.receive_connection(connection)
 
-                    connection.send(self.id.encode("utf-8"))
+                    if connected_node_id is None:
+                        return
 
                     thread_client = self.create_new_connection(
                         connection,
