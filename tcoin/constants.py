@@ -15,6 +15,9 @@ MIN_STRONG_PARENTS = 1  # minimum amount of strong parents a message must have
 MAX_MSG_SIZE = 4096  # maximum size of a message in bytes
 MAX_PARENT_AGE = 60 * 60  # maximum age a parent can be older than a child message
 
+# Request
+MAX_REQUEST_SIZE = 16384  # maximum size of a request in bytes
+
 # Pow
 MAX_NONCE = 2**32
 BASE_DIFFICULTY = 18

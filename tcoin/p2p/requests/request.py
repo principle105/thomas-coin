@@ -1,5 +1,7 @@
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
+from config import MAX_REQUEST_SIZE
+from objsize import get_deep_size
 from tcoin.tangle.messages import SignedPayload
 from tcoin.utils import get_raw_hash
 
@@ -44,7 +46,12 @@ class Request(SignedPayload):
         ...
 
     def is_valid(self):
-        # Checking if the message is too large
+        # Checking if the request is too large
+        data = self.to_dict()
+
+        # Transaction does not exceed the maximum size
+        if get_deep_size(data) > MAX_REQUEST_SIZE:
+            return False
 
         # Checking if the hash matches the data
         if self.hash != self.get_hash():

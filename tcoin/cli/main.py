@@ -266,7 +266,10 @@ def start():
                 choices.append(Choice(value=1, name="Back"))
 
             result = inquirer.select(
-                message="What do you want to do?", choices=choices, border=True
+                message="What do you want to do?",
+                choices=choices,
+                border=True,
+                instruction="Use the arrow keys",
             ).execute()
 
             if result == 0:

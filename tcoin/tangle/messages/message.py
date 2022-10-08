@@ -1,4 +1,3 @@
-import math
 import time
 from typing import TYPE_CHECKING
 
@@ -146,7 +145,7 @@ class Message(SignedPayload):
         data = self.to_dict()
 
         # Transaction does not exceed the maximum size
-        if get_deep_size() > MAX_MSG_SIZE:
+        if get_deep_size(data) > MAX_MSG_SIZE:
             return False
 
         # Field type validation
