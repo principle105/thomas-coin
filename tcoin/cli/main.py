@@ -1,7 +1,10 @@
+from typing import Callable
+
 import typer
 import yaml
 from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
+from InquirerPy.separator import Separator
 from InquirerPy.utils import color_print
 from InquirerPy.validator import EmptyInputValidator
 from pyfiglet import figlet_format
@@ -234,33 +237,53 @@ def start():
 
         sp.ok("✔")
 
-    choices = {
-        "Connect": connect,
-        "Node Stats": node_stats,
-        "Tangle Stats": tangle_stats,
-        "View Address": view_address,
-        "Balance": view_balance,
+    menu_options = {
+        "Network": {
+            "Connect": connect,
+            "Node Stats": node_stats,
+        },
+        "Tangle": {
+            "Tangle Stats": tangle_stats,
+            "View Message": view_msg,
+            "Balance": view_balance,
+        },
         "Send": send,
-        "View Message": view_msg,
     }
 
     is_done = False
 
     while is_done is False:
-        result = inquirer.select(
-            message="What do you want to do?",
-            choices=list(choices.keys()) + [Choice(value=None, name="Stop Node")],
-        ).execute()
+        prev_options = []
+        options = menu_options
 
-        if result is None:
-            is_done = inquirer.confirm(
-                message="Are you sure you want to stop this node?", default=False
+        while options:
+            choices = list(options.keys())
+
+            if options == menu_options:
+                choices.append(Choice(value=0, name="Stop Node"))
+
+            else:
+                choices.append(Choice(value=1, name="Back"))
+
+            result = inquirer.select(
+                message="What do you want to do?", choices=choices, border=True
             ).execute()
 
-        else:
-            callback = choices[result]
+            if result == 0:
+                is_done = inquirer.confirm(
+                    message="Are you sure you want to stop this node?", default=False
+                ).execute()
 
-            callback(tangle, node)
+            elif result == 1:
+                options = prev_options
+
+            else:
+                prev_options = options
+                options = options[result]
+
+                if isinstance(options, Callable):
+                    options(tangle, node)
+                    options = None
 
     Send.fail("Stopping Node...")
 
