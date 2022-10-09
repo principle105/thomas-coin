@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
-from config import MAX_REQUEST_SIZE
 from objsize import get_deep_size
+from tcoin.constants import MAX_REQUEST_SIZE
 from tcoin.tangle.messages import SignedPayload
 from tcoin.utils import get_raw_hash
 
