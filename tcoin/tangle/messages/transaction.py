@@ -51,13 +51,13 @@ class Transaction(Message):
         if self.node_id == t.receiver:
             return False
 
+        if t.amt < MIN_SEND_AMT:
+            return False
+
         index = tangle.get_transaction_index(self.node_id)
 
         # Checking if the transaction index is correct
         if index != t.index:
-            return False
-
-        if t.amt < MIN_SEND_AMT:
             return False
 
         balance = tangle.get_balance(self.node_id)

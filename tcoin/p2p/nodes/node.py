@@ -3,7 +3,6 @@ import random
 import socket
 import string
 import time
-from threading import Event, Thread
 
 from tcoin.config import request_children_after
 from tcoin.tangle import Tangle
@@ -13,11 +12,13 @@ from tcoin.wallet import Wallet
 
 from ..requests import DiscoverPeers, GetMsgs, Request, request_lookup
 from .node_connection import NodeConnection
+from .scheduler import Scheduler
+from .threaded import Threaded
 
 KNOWN_PEERS_FILE_NAME = "known_peers"
 
 
-class Node(Thread):
+class Node(Threaded):
     def __init__(
         self,
         *,
@@ -30,8 +31,6 @@ class Node(Thread):
     ):
         super().__init__()
 
-        self.terminate_flag = Event()
-
         self.host = host
         self.port = port
 
@@ -42,6 +41,8 @@ class Node(Thread):
         # Connections
         self.nodes_inbound = {}
         self.nodes_outbound = {}
+
+        self.scheduler = Scheduler()
 
         # Other nodes that are known about
         self.other_nodes = {}
@@ -68,9 +69,6 @@ class Node(Thread):
         self.sock.bind((self.host, self.port))
         self.sock.settimeout(10.0)
         self.sock.listen(1)
-
-    def stop(self):
-        self.terminate_flag.set()
 
     def send_to_nodes(self, data: dict, exclude: list[str] = []):
         for _id, n in self.all_nodes.items():
@@ -162,7 +160,7 @@ class Node(Thread):
             return
 
         # Handling if the data is a message
-        self.handle_new_message(node, data)
+        self.handle_new_message(data, node=node)
 
     def request_msgs(self, msgs: list, initial: Message = None, history=False):
         request = self.create_request(
@@ -173,9 +171,7 @@ class Node(Thread):
         )
 
         if initial is not None:
-            callback = lambda node: self.handle_new_message(
-                node, initial.to_dict(), propagate=False
-            )
+            callback = lambda: self.handle_new_message(initial.to_dict())
 
             self.request_callback_pool[request.hash] = callback
 
@@ -208,21 +204,34 @@ class Node(Thread):
 
         if callback is not None:
             del self.request_callback_pool[request.hash]
-            callback(node)
+            callback()
 
-    def handle_new_message(self, node: NodeConnection, data: dict, propagate=True):
+    def handle_new_message(self, node: NodeConnection, data: dict):
         msg = message_lookup(data)
 
         if msg is None:
             return
 
-        if msg.hash in self.tangle.msgs:
+        # Semantically validate the message
+        is_sem_valid = msg.is_sem_valid()
+
+        if is_sem_valid is False:
             return False
 
+        if msg.hash in self.tangle.msgs:
+            return
+
+        # Propagating message to other nodes
+        self.send_to_nodes(data, exclude=[node.id])
+
+        # Queueing the message
+        self.scheduler.queue_msg(msg)
+
+    def add_msg_from_queue(self, msg: Message):
         result = msg.is_valid(self.tangle)
 
         if result is False:
-            return False
+            return
 
         invalid_parents = []
 
@@ -241,23 +250,15 @@ class Node(Thread):
                 else:
                     self.request_msgs(initial=msg, msgs=unknown_parents)
 
-                return True
+                return
 
-        if self.tangle.get_msg(msg.hash) is None:
+        # Checking if the payload is valid all parents are known about
+        if msg.is_payload_valid(self.tangle) is False:
+            self.tangle.state.add_invalid_msg(msg.hash)
+            return
 
-            # Checking if the payload is valid all parents are known about
-            if msg.is_payload_valid(self.tangle) is False:
-                self.tangle.state.add_invalid_msg(msg.hash)
-                return False
-
-            # Adding the message to the tangle if it doesn't exist yet
-            self.tangle.add_msg(msg, invalid_parents)
-
-            # Propagating message to other nodes
-            if propagate:
-                self.send_to_nodes(data, exclude=[node.id])
-
-        return True
+        # Adding the message to the tangle if it doesn't exist yet
+        self.tangle.add_msg(msg, invalid_parents)
 
     def receive_connection(self, sock: socket.socket):
         try:
@@ -266,7 +267,7 @@ class Node(Thread):
             # Sending our id to other node
             sock.send(f"{self.id}:{random_string}".encode("utf-8"))
 
-            # Receiving the other node's  id and random string
+            # Receiving the other node's id and random string
             result = sock.recv(4096).decode("utf-8")
 
             connected_node_id, other_random_string = result.split(":")
@@ -301,28 +302,26 @@ class Node(Thread):
                 connection, client_address = self.sock.accept()
 
                 if (
-                    self.max_connections == 0
-                    or len(self.nodes_inbound) < self.max_connections
+                    self.max_connections != 0
+                    and len(self.nodes_inbound) >= self.max_connections
                 ):
-
-                    connected_node_id = self.receive_connection(connection)
-
-                    if connected_node_id is None:
-                        return
-
-                    thread_client = self.create_new_connection(
-                        connection,
-                        connected_node_id,
-                        client_address[0],
-                        client_address[1],
-                    )
-                    thread_client.start()
-
-                    self.nodes_inbound[connected_node_id] = thread_client
-
-                else:
                     logging.debug("Reached maximum connection limit")
                     connection.close()
+
+                connected_node_id = self.receive_connection(connection)
+
+                if connected_node_id is None:
+                    return
+
+                thread_client = self.create_new_connection(
+                    connection,
+                    connected_node_id,
+                    client_address[0],
+                    client_address[1],
+                )
+                thread_client.start()
+
+                self.nodes_inbound[connected_node_id] = thread_client
 
             except socket.timeout:
                 logging.debug("Connection timed out")

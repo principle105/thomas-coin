@@ -140,8 +140,9 @@ class Message(SignedPayload):
 
         self.hash, self.nonce = pow(raw_data, difficulty)
 
-    def is_valid(self, tangle: "Tangle", depth=2) -> bool:
-        depth -= 1
+    def is_sem_valid(self):
+        """Checks if the message is semantically valid"""
+
         data = self.to_dict()
 
         # Transaction does not exceed the maximum size
@@ -176,20 +177,10 @@ class Message(SignedPayload):
         if self.timestamp < genesis_msg.timestamp:
             return False
 
-        # Ensuring the timestamp is not past 2 hours into the future
-        if self.timestamp > time.time() + 60 * 60 * 2:
-            return False
-
         raw_data = self.get_raw_data()
 
         # Checking if the hash matches the data
         if get_pow_hash(raw_data, self.nonce) != self.hash:
-            return False
-
-        target = get_target(tangle.get_difficulty(self))
-
-        # Checking if enough work has been done
-        if is_valid_hash(self.hash, target) is False:
             return False
 
         # Checking if the signature is valid
@@ -201,6 +192,20 @@ class Message(SignedPayload):
             return False
 
         if len(self.parents) > MAX_PARENTS:
+            return False
+
+        return True
+
+    def is_valid(self, tangle: "Tangle", depth=2) -> bool:
+        """Checks if the message is valid"""
+
+        depth -= 1
+
+        # Checking if enough work has been done
+        target = get_target(tangle.get_difficulty(self))
+
+        # Checking if enough work has been done
+        if is_valid_hash(self.hash, target) is False:
             return False
 
         invalid_parents = set()  # parents that are known to be invalid is a parent

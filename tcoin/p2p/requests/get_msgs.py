@@ -56,7 +56,7 @@ class GetMsgs(Request):
 
         return children
 
-    def receive(self, client: "Node", node: "Node"):
+    def receive(self, client: "Node", _):
         msgs = self.response
 
         if msgs is None:
@@ -70,4 +70,4 @@ class GetMsgs(Request):
             if m is None:
                 continue
 
-            client.handle_new_message(node, m, propagate=False)
+            client.handle_new_message(m)

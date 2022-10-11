@@ -4,8 +4,9 @@ import socket
 import time
 import zlib
 from base64 import b64decode, b64encode
-from threading import Event, Thread
 from typing import TYPE_CHECKING
+
+from .threaded import Threaded
 
 if TYPE_CHECKING:
     from .node import Node
@@ -13,13 +14,11 @@ if TYPE_CHECKING:
 EOT_CHAR = 0x04.to_bytes(1, "big")
 
 
-class NodeConnection(Thread):
+class NodeConnection(Threaded):
     def __init__(
         self, *, main_node: "Node", sock: socket.socket, id: str, host: str, port: int
     ):
         super().__init__()
-
-        self.terminate_flag = Event()
 
         self.main_node = main_node
 
@@ -60,9 +59,6 @@ class NodeConnection(Thread):
 
         except UnicodeDecodeError:
             return packet
-
-    def stop(self):
-        self.terminate_flag.set()
 
     def run(self):
         buffer = b""

@@ -1,5 +1,6 @@
 import random
 import time
+from functools import lru_cache
 
 from tcoin.config import invalid_msg_pool_purge_time, invalid_msg_pool_size
 from tcoin.constants import (
@@ -161,6 +162,7 @@ class Tangle:
 
         return self.msgs[msg_id]
 
+    @lru_cache(maxsize=64)
     def get_difficulty(self, msg: Message):
         def _in_window(m):
             return (
