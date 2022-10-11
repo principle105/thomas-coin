@@ -24,7 +24,7 @@ MAX_REQUEST_SIZE = 16384  # maximum size of a request in bytes
 
 # Pow
 MAX_NONCE = 2**32
-BASE_DIFFICULTY = 24
+BASE_DIFFICULTY = 10
 GAMMA = 0.2
 TIME_WINDOW = 60  # seconds
 

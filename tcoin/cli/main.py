@@ -126,14 +126,18 @@ def send(tangle: Tangle, node: Node):
 
     msg.sign(node.wallet)
 
-    # Checking if the message is valid
-    if msg.is_valid(tangle) is False:
-        return Send.fail("Invalid transaction!")
+    msg_data = msg.to_dict()
 
-    tangle.add_msg(msg)
+    is_sem_valid = node.handle_new_message(msg_data)
+
+    # Checking if the message is valid
+    if is_sem_valid:
+        return Send.fail("Semantically invalid!")
+
+    Send.success("Queued transaction")
 
     with Send.spinner("Broadcasting Transaction"):
-        node.send_to_nodes(msg.to_dict())
+        node.send_to_nodes(msg_data)
 
     Send.success("Transaction Broadcasted")
     Send.primary(f"Message Hash: {msg.hash}")
@@ -248,6 +252,7 @@ def start():
             "Balance": view_balance,
         },
         "Send": send,
+        "View Address": view_address,
     }
 
     is_done = False

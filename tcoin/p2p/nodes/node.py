@@ -42,8 +42,6 @@ class Node(Threaded):
         self.nodes_inbound = {}
         self.nodes_outbound = {}
 
-        self.scheduler = Scheduler()
-
         # Other nodes that are known about
         self.other_nodes = {}
 
@@ -55,6 +53,8 @@ class Node(Threaded):
         # Initializing the TCP/IP server
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.init_server()
+
+        self.scheduler = Scheduler(self)
 
     @property
     def all_nodes(self):
@@ -206,7 +206,7 @@ class Node(Threaded):
             del self.request_callback_pool[request.hash]
             callback()
 
-    def handle_new_message(self, node: NodeConnection, data: dict):
+    def handle_new_message(self, data: dict, node: NodeConnection = None):
         msg = message_lookup(data)
 
         if msg is None:
@@ -221,8 +221,9 @@ class Node(Threaded):
         if msg.hash in self.tangle.msgs:
             return
 
-        # Propagating message to other nodes
-        self.send_to_nodes(data, exclude=[node.id])
+        if node is not None:
+            # Propagating message to other nodes
+            self.send_to_nodes(data, exclude=[node.id])
 
         # Queueing the message
         self.scheduler.queue_msg(msg)
@@ -296,6 +297,9 @@ class Node(Threaded):
             return None
 
     def run(self):
+        # Starting the scheduler
+        self.scheduler.start()
+
         while not self.terminate_flag.is_set():
             try:
                 logging.debug("Waiting for incoming connections...")
