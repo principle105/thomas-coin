@@ -70,7 +70,7 @@ class Scheduler(Threaded):
             del self.queue[msg.node_id]
 
         # Processing the message
-        self.node.add_msg_from_queue(msg)
+        self.node.add_new_msg(msg)
 
         self.update_score(msg.node_id)
 

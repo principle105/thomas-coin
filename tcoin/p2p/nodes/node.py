@@ -162,7 +162,7 @@ class Node(Threaded):
         # Handling if the data is a message
         self.handle_new_message(data, node=node)
 
-    def request_msgs(self, msgs: list, initial: Message = None, history=False):
+    def request_msgs(self, msgs: list[str], initial: Message = None, history=False):
         request = self.create_request(
             GetMsgs,
             initial=initial.to_dict(),
@@ -171,7 +171,10 @@ class Node(Threaded):
         )
 
         if initial is not None:
-            callback = lambda: self.handle_new_message(initial.to_dict())
+
+            def callback():
+                if self.serialize_msg(initial.to_dict()):
+                    self.add_new_msg(initial)
 
             self.request_callback_pool[request.hash] = callback
 
@@ -207,19 +210,8 @@ class Node(Threaded):
             callback()
 
     def handle_new_message(self, data: dict, node: NodeConnection = None):
-        msg = message_lookup(data)
-
-        if msg is None:
-            return
-
-        # Semantically validate the message
-        is_sem_valid = msg.is_sem_valid()
-
-        if is_sem_valid is False:
+        if (msg := self.serialize_msg(data)) is False:
             return False
-
-        if msg.hash in self.tangle.msgs:
-            return
 
         if node is not None:
             # Propagating message to other nodes
@@ -228,7 +220,27 @@ class Node(Threaded):
         # Queueing the message
         self.scheduler.queue_msg(msg)
 
-    def add_msg_from_queue(self, msg: Message):
+    def serialize_msg(self, data: dict):
+        msg = message_lookup(data)
+
+        if msg is None:
+            return False
+
+        # Semantically validate the message
+        is_sem_valid = msg.is_sem_valid()
+
+        if is_sem_valid is False:
+            return False
+
+        if msg.hash in self.tangle.msgs:
+            return False
+
+        return msg
+
+    def add_new_msg(self, msg: Message):
+        if msg.hash in self.tangle.msgs:
+            return
+
         result = msg.is_valid(self.tangle)
 
         if result is False:

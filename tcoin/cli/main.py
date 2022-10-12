@@ -131,7 +131,7 @@ def send(tangle: Tangle, node: Node):
     is_sem_valid = node.handle_new_message(msg_data)
 
     # Checking if the message is valid
-    if is_sem_valid:
+    if is_sem_valid is False:
         return Send.fail("Semantically invalid!")
 
     Send.success("Queued transaction")
@@ -281,6 +281,7 @@ def start():
                 is_done = inquirer.confirm(
                     message="Are you sure you want to stop this node?", default=False
                 ).execute()
+                break
 
             elif result == 1:
                 options = prev_options

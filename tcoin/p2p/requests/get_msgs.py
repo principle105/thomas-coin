@@ -70,4 +70,7 @@ class GetMsgs(Request):
             if m is None:
                 continue
 
-            client.handle_new_message(m)
+            if (msg := client.serialize_msg(m)) is False:
+                continue
+
+            client.add_new_msg(msg)
