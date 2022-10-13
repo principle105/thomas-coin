@@ -176,14 +176,14 @@ class Tangle:
 
         return BASE_DIFFICULTY + int(GAMMA * msg_count)
 
-    def to_dict_msgs(self):
-        return {_id: m.to_dict() for _id, m in self.msgs.items()}
+    def get_msgs_as_dict(self):
+        return [m.to_dict() for m in self.msgs.values()]
 
     @classmethod
-    def from_dict(cls, tangle_data: dict):
+    def from_dict(cls, tangle_data: list):
         tangle = cls()
 
-        for m_data in reversed(tangle_data.values()):
+        for m_data in reversed(tangle_data):
             msg = message_lookup(m_data)
 
             if msg is None:
@@ -198,7 +198,7 @@ class Tangle:
         return tangle
 
     def save(self):
-        save_storage_file(TANGLE_PATH, self.to_dict_msgs())
+        save_storage_file(TANGLE_PATH, self.get_msgs_as_dict())
 
     @classmethod
     def from_save(cls):
