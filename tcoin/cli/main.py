@@ -218,7 +218,7 @@ def start():
         sp.write("- Loaded tangle from save")
 
         node = Node(
-            host="0.0.0.0",
+            host="",
             port=int(port),
             tangle=tangle,
             wallet=wallet,
@@ -313,7 +313,10 @@ def wallet():
     if wallet is None:
         return
 
-    Send.primary(f"ADDRESS: {wallet.address}\nPRIVATE KEY: {wallet.pk}")
+    Send.primary(f"Address: {wallet.address}")
+
+    if secret is None:
+        Send.secondary(f"Private Key: {wallet.pk}")
 
 
 @app.command()

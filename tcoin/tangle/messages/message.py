@@ -138,7 +138,10 @@ class Message(SignedPayload):
         raw_data = self.get_raw_data()
         difficulty = tangle.get_difficulty(self)
 
-        self.hash, self.nonce = pow(raw_data, difficulty)
+        result = pow(raw_data, difficulty)
+
+        if result:
+            self.hash, self.nonce = result
 
     def is_sem_valid(self):
         """Checks if the message is semantically valid"""

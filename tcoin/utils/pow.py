@@ -27,3 +27,5 @@ def pow(msg: str, difficulty: int):
 
         if is_valid_hash(hash_result, target):
             return hash_result, nonce
+
+    return False
