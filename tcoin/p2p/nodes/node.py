@@ -187,7 +187,7 @@ class Node(Threaded):
             return False
 
         if request.is_valid() is False:
-            return False
+            return True
 
         if request.response is None:
             request.response = request.respond(self, node)
@@ -198,7 +198,7 @@ class Node(Threaded):
 
         # Checking if the our node sent the request
         if self.id != request.node_id:
-            return False
+            return True
 
         request.receive(self, node)
 
@@ -208,6 +208,8 @@ class Node(Threaded):
         if callback is not None:
             del self.request_callback_pool[request.hash]
             callback()
+
+        return True
 
     def handle_new_message(self, data: dict, node: NodeConnection = None):
         if (msg := self.serialize_msg(data)) is False:
@@ -346,6 +348,9 @@ class Node(Threaded):
                 logging.exception(e)
 
             time.sleep(0.01)
+
+        # Stopping the scheduler
+        self.scheduler.stop()
 
         for node in self.all_nodes.values():
             node.stop()

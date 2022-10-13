@@ -36,7 +36,7 @@ def generate_message_lookup(msg_types: list["Message"]):
         try:
             msg_obj = msg_cls(**data)
 
-        except Exception as e:
+        except Exception:
             return None
 
         else:
