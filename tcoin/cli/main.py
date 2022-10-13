@@ -256,12 +256,12 @@ def start():
     }
 
     is_done = False
+    prev_options = []
+    options = menu_options
 
     while is_done is False:
-        prev_options = []
-        options = menu_options
 
-        while options:
+        while True:
             choices = list(options.keys())
 
             if options == menu_options:
@@ -287,18 +287,20 @@ def start():
                 options = prev_options
 
             else:
-                prev_options = options
-                options = options[result]
+                callback = options[result]
 
-                if isinstance(options, Callable):
-                    options(tangle, node)
-                    options = None
+                if isinstance(callback, Callable):
+                    callback(tangle, node)
+                    break
+
+                prev_options = options
+                options = callback
 
     Send.fail("Stopping Node...")
 
-    node.stop()
-
     node.save_all_nodes()
+
+    node.stop()
 
     tangle.save()
 
