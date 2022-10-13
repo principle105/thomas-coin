@@ -194,17 +194,10 @@ def view_msg(tangle: Tangle, _):
 
 @app.command()
 def start():
-    host = inquirer.text(
-        message="Host:",
-        validate=EmptyInputValidator(),
-    ).execute()
-
     port = inquirer.number(
         message="Port:",
         validate=EmptyInputValidator(),
     ).execute()
-
-    port = int(port)
 
     pk = inquirer.secret(
         message="Your Private Key:",
@@ -225,7 +218,7 @@ def start():
         sp.write("- Loaded tangle from save")
 
         node = Node(
-            host=host,
+            host="0.0.0.0",
             port=int(port),
             tangle=tangle,
             wallet=wallet,
