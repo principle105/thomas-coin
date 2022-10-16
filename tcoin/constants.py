@@ -35,8 +35,8 @@ GENESIS_MSG_DATA = {
     "payload": {
         "receiver": "TmANJZAiiZTjBiLZt2QDKoYVtLn8yHGPdXdydymbPVJDZ",
         "amt": 25000,
-        "index": 0,
     },
+    "index": 0,
     "parents": {},
     "timestamp": 1653266909,
     "nonce": 0,

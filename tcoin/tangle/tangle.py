@@ -26,7 +26,7 @@ class TangleState:
         self.strong_tips = strong_tips  # hash: timestamp
         self.weak_tips = weak_tips  # hash: timestamp
 
-        self.wallets = wallets  # address: balance
+        self.wallets = wallets  # address: [balance, ...]
 
         self.invalid_msg_pool = {}  # hash: timestamp of last access
 
@@ -82,25 +82,36 @@ class TangleState:
         # Mapping the tips to their tip type
         return {_id: int(_id in self.weak_tips) for _id in tip_ids}
 
-    def get_balance(self, address: str):
-        return self.wallets.get(address, 0)
+    def get_raw_balance(self, address: str) -> list:
+        return self.wallets.get(address, [])
+
+    def get_balance(self, address: str, index: int = None) -> int:
+        if index is None:
+            index = -1
+
+        balance = self.get_raw_balance(address)
+
+        if not balance:
+            return 0
+
+        return balance[index]
 
     def add_transaction(self, msg: Transaction):
         t = msg.get_transaction()
 
-        sender_bal = self.get_balance(msg.node_id)
-        receiver_bal = self.get_balance(t.receiver)
+        sender = self.get_raw_balance(msg.node_id)
+        receiver = self.get_raw_balance(t.receiver)
 
         # Checking if it is a genesis message
         if msg.node_id != "0":
-            new_balance = sender_bal - t.amt
+            new_balance = (sender[-1] if sender else 0) - t.amt
 
-            if new_balance == 0:
-                del self.wallets[msg.node_id]
-            else:
-                self.wallets[msg.node_id] = new_balance
+            self.wallets[msg.node_id] = sender + [new_balance]
 
-        self.wallets[t.receiver] = receiver_bal + t.amt
+        if not receiver:
+            self.wallets[t.receiver] = [t.amt]
+        else:
+            self.wallets[t.receiver][-1] += t.amt
 
 
 class Tangle:
@@ -152,6 +163,16 @@ class Tangle:
             return None
 
         return {_id: m for _id, m in self.msgs.items() if msg_id in m.parents}
+
+    def find_msg_from_index(self, address: str, index: int) -> Message | None:
+        return next(
+            (
+                m
+                for m in self.msgs.values()
+                if m.address == address and m.index == index
+            ),
+            None,
+        )
 
     def get_transaction_index(self, address: str) -> int:
         return sum(1 for m in self.msgs.values() if m.address == address)

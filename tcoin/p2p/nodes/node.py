@@ -92,8 +92,8 @@ class Node(Threaded):
             for host, port in random.sample(list(saved_nodes.values()), amt):
                 self.connect_to_node(host, port)
 
-    def create_message(self, msg_cls, payload: dict):
-        return msg_cls(node_id=self.id, payload=payload)
+    def create_message(self, msg_cls, index: int, payload: dict):
+        return msg_cls(node_id=self.id, index=index, payload=payload)
 
     def create_request(self, request_cls, **payload):
         request = request_cls(node_id=self.id, payload=payload)
@@ -271,6 +271,13 @@ class Node(Threaded):
         if msg.is_payload_valid(self.tangle) is False:
             self.tangle.state.add_invalid_msg(msg.hash)
             return
+
+        duplicate = self.tangle.find_msg_from_index(msg.node_id, msg.index)
+
+        # Checking if it has a duplicate transaction index
+        if duplicate is not None:
+            # TODO: handle branch
+            ...
 
         # Adding the message to the tangle if it doesn't exist yet
         self.tangle.add_msg(msg, invalid_parents)

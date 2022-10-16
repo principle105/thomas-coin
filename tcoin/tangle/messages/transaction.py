@@ -11,20 +11,14 @@ from .payload import Payload
 
 
 class TransactionPayload(Payload):
-    def __init__(self, *, receiver: str, amt: int, index: int):
+    def __init__(self, *, receiver: str, amt: int):
 
         self.receiver = receiver
 
         self.amt = amt
 
-        self.index = index
-
     def to_dict(self):
-        return {
-            "receiver": self.receiver,
-            "amt": self.amt,
-            "index": self.index,
-        }
+        return {"receiver": self.receiver, "amt": self.amt}
 
 
 class Transaction(Message):
@@ -41,10 +35,7 @@ class Transaction(Message):
             return False
 
         # Field type validation
-        if (
-            any(check_var_types((t.amt, int), (t.receiver, str), (t.index, int)))
-            is False
-        ):
+        if any(check_var_types((t.amt, int), (t.receiver, str))) is False:
             return False
 
         # Making sure you aren't sending to yourself
@@ -52,12 +43,6 @@ class Transaction(Message):
             return False
 
         if t.amt < MIN_SEND_AMT:
-            return False
-
-        index = tangle.get_transaction_index(self.node_id)
-
-        # Checking if the transaction index is correct
-        if index != t.index:
             return False
 
         balance = tangle.get_balance(self.node_id)

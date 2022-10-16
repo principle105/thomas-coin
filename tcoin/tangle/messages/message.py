@@ -105,6 +105,7 @@ class Message(SignedPayload):
         self,
         *,
         node_id: str,
+        index: int,
         payload: dict,
         parents: dict[str, bool] = [],
         nonce: int = None,
@@ -121,6 +122,8 @@ class Message(SignedPayload):
         )
 
         self.parents = parents
+
+        self.index = index
 
         self.nonce = nonce
 
@@ -157,6 +160,7 @@ class Message(SignedPayload):
             any(
                 check_var_types(
                     (self.node_id, str),
+                    (self.index, int),
                     (self.payload, dict),
                     (self.parents, dict),
                     (self.nonce, int),
@@ -282,7 +286,7 @@ class Message(SignedPayload):
 
     @property
     def meta_data(self) -> dict:
-        return {**super().meta_data, "parents": self.parents}
+        return {**super().meta_data, "parents": self.parents, "index": self.index}
 
     def to_dict(self) -> dict:
         return {**super().to_dict(), "nonce": self.nonce}

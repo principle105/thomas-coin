@@ -1,3 +1,4 @@
+import socket
 from typing import Callable
 
 import typer
@@ -101,12 +102,12 @@ def send(tangle: Tangle, node: Node):
 
     amount = int(amount)
 
+    # Constructing the transaction
+    payload = TransactionPayload(receiver=address, amt=amount)
+
     index = tangle.get_transaction_index(node.wallet.address)
 
-    # Constructing the transaction
-    payload = TransactionPayload(receiver=address, amt=amount, index=index)
-
-    msg = node.create_message(Transaction, payload=payload.to_dict())
+    msg = node.create_message(Transaction, index=index, payload=payload.to_dict())
 
     msg.select_parents(tangle)
 
@@ -219,7 +220,7 @@ def start():
 
         node = Node(
             host="",
-            port=int(port),
+            port=80,
             tangle=tangle,
             wallet=wallet,
             full_node=full_node,
