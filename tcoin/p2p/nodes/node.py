@@ -255,6 +255,10 @@ class Node(Threaded):
 
             # Checking if the message is not weak
             if not invalid_parents:
+                # TODO: check if the unknown parents are part of a branch
+
+                # TODO: Add the message to the branch
+
                 age = time.time() - msg.timestamp
 
                 # Getting the children of a message if the message is past a certain age
@@ -276,8 +280,8 @@ class Node(Threaded):
 
         # Checking if it has a duplicate transaction index
         if duplicate is not None:
-            # TODO: handle branch
-            ...
+            # Creating a new branch
+            self.tangle.create_new_branch(msg)
 
         # Adding the message to the tangle if it doesn't exist yet
         self.tangle.add_msg(msg, invalid_parents)

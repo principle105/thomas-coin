@@ -26,7 +26,7 @@ class TangleState:
         self.strong_tips = strong_tips  # hash: timestamp
         self.weak_tips = weak_tips  # hash: timestamp
 
-        self.wallets = wallets  # address: [balance, ...]
+        self.wallets = wallets  # address: balance
 
         self.invalid_msg_pool = {}  # hash: timestamp of last access
 
@@ -85,43 +85,43 @@ class TangleState:
     def get_raw_balance(self, address: str) -> list:
         return self.wallets.get(address, [])
 
-    def get_balance(self, address: str, index: int = None) -> int:
-        if index is None:
-            index = -1
-
-        balance = self.get_raw_balance(address)
-
-        if not balance:
-            return 0
-
-        return balance[index]
+    def get_balance(self, address: str):
+        return self.wallets.get(address, 0)
 
     def add_transaction(self, msg: Transaction):
         t = msg.get_transaction()
 
-        sender = self.get_raw_balance(msg.node_id)
-        receiver = self.get_raw_balance(t.receiver)
+        sender_bal = self.get_balance(msg.node_id) - t.amt
+        receiver_bal = self.get_balance(t.receiver) + t.amt
 
         # Checking if it is a genesis message
         if msg.node_id != "0":
-            new_balance = (sender[-1] if sender else 0) - t.amt
+            if sender_bal == 0:
+                del self.wallets[msg.node_id]
+            else:
+                self.wallets[msg.node_id] = sender_bal
 
-            self.wallets[msg.node_id] = sender + [new_balance]
-
-        if not receiver:
-            self.wallets[t.receiver] = [t.amt]
-        else:
-            self.wallets[t.receiver][-1] += t.amt
+        self.wallets[t.receiver] = receiver_bal
 
 
 class Tangle:
-    def __init__(self, msgs: dict[str, Message] = {}, state: TangleState = None):
+    def __init__(
+        self,
+        msgs: dict[str, Message] = {},
+        branches: dict[str, list[dict[str, Message]]] = {},
+        state: TangleState = None,
+    ):
         if state is None:
             state = TangleState()
 
+        # State of the main tangle
         self.state = state
 
+        # Main branch messages
         self.msgs = msgs
+
+        # Conflicting branches
+        self.branches = branches  # og_msg: [{msg_hash: Message, ...}, ...]
 
         if not self.msgs:
             self.add_msg(genesis_msg)
@@ -182,6 +182,12 @@ class Tangle:
             return None
 
         return self.msgs[msg_id]
+
+    def create_new_branch(self, msg: Message):
+        if msg.hash in self.branches:
+            return
+
+        self.branches[msg.hash] = {msg.hash: msg}
 
     @lru_cache(maxsize=64)
     def get_difficulty(self, msg: Message):
