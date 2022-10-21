@@ -21,17 +21,20 @@ class TangleState:
     """Keeps track of the tangle's current state"""
 
     def __init__(
-        self, strong_tips: dict = {}, weak_tips: dict = {}, wallets: dict = {}
+        self,
+        strong_tips: dict[str, Message] = {},
+        weak_tips: dict[str, Message] = {},
+        wallets: dict[str, int] = {},
     ):
-        self.strong_tips = strong_tips  # hash: timestamp
-        self.weak_tips = weak_tips  # hash: timestamp
+        self.strong_tips = strong_tips  # hash: msg
+        self.weak_tips = weak_tips  # hash: msg
 
         self.wallets = wallets  # address: balance
 
-        self.invalid_msg_pool = {}  # hash: timestamp of last access
+        self.invalid_msg_pool: dict[str, int] = {}  # hash: timestamp of last access
 
     def add_invalid_msg(self, msg_hash: str):
-        self.invalid_msg_pool[msg_hash] = time.time()
+        self.invalid_msg_pool[msg_hash] = int(time.time())
 
     def in_invalid_pool(self, msg_hash: str):
         in_pool = msg_hash in self.invalid_msg_pool
@@ -57,11 +60,17 @@ class TangleState:
     def purge_tips(self, tips):
         current_time = time.time()
 
-        return {
-            _id: age
-            for _id, age in tips.items()
-            if age + MAX_TIP_AGE >= current_time or _id == genesis_msg.hash
+        purged_tips = {
+            _id: msg
+            for _id, msg in tips.items()
+            if msg.timestamp + MAX_TIP_AGE >= current_time
         }
+
+        # Checking for the genesis message only once per purge
+        if genesis_msg.hash in tips:
+            purged_tips[genesis_msg.hash] = tips[genesis_msg.hash]
+
+        return purged_tips
 
     @property
     def all_tips(self):
@@ -121,7 +130,7 @@ class Tangle:
         self.msgs = msgs
 
         # Conflicting branches
-        self.branches = branches  # og_msg: [{msg_hash: Message, ...}, ...]
+        self.branches = branches  # (node_id, index): [{msg_hash: Message, ...}, ...]
 
         if not self.msgs:
             self.add_msg(genesis_msg)
@@ -130,33 +139,81 @@ class Tangle:
     def get_balance(self):
         return self.state.get_balance
 
-    def add_msg(self, msg: Message, invalid_parents: list[str] = []):
-        self.msgs[msg.hash] = msg
+    @property
+    def all_msgs(self):
+        return {**self.msgs, **self.state.all_tips}
 
-        # Updating the tangle with the message
+    def add_approved_msg(self, msg: Message):
+        self.msgs[msg.hash] = msg
         msg.update_state(self)
+
+    def _find_children(
+        self,
+        msg_id: str,
+        *,
+        stop: int = None,
+        total: dict[str, Message] = {},
+    ) -> list[Message]:
+        # TODO: Check if the message is part of a branch based on the parents
+
+        children = {_id: m for _id, m in self.all_msgs.items() if msg_id in m.parents}
+
+        total.update(children)
+
+        if stop is not None:
+            stop -= 1
+
+            if stop == 0:
+                return total
+
+        for c in children:
+            total = self._find_children(c, stop=stop, total=total)
+
+        return total
+
+    def find_children(self, msg: Message, stop: int = None) -> list[Message]:
+        # Recursively finding all children
+        return self._find_children(msg.hash, stop=stop)
+
+    def add_msg(self, msg: Message, invalid_parents: list[str] = []):
+        # Updating the state without approval if it's the genesis message
+        if msg.hash == genesis_msg.hash:
+            self.add_approved_msg(msg)
 
         # Only validating tips if the message does not contain invalid parents
         if not invalid_parents:
             for p, t in msg.parents.items():
+                if p == genesis_msg.hash:
+                    continue
+
+                p_msg: Message = self.get_msg(p)
+
                 # Getting the total amount of children of the parent tip
-                total_children = sum(1 for m in self.msgs.values() if p in m.parents)
+                # TODO: cache the child count
+                total_children = len(self.find_children(p_msg))
 
                 if total_children > 1:
-                    if t == 0 and p in self.state.strong_tips:
+                    if t == 0:
                         del self.state.strong_tips[p]
 
-                    elif t == 1 and p in self.state.weak_tips:
+                    else:
                         del self.state.weak_tips[p]
 
-            self.state.strong_tips[msg.hash] = msg.timestamp
+                    self.add_approved_msg(p_msg)
+
+            self.state.strong_tips[msg.hash] = msg
 
         else:
             # If there are invalid parents, the tip is added to the weak pool
-            self.state.weak_tips[msg.hash] = msg.timestamp
+            self.state.weak_tips[msg.hash] = msg
 
     def get_msg(self, hash_str: str):
-        return self.msgs.get(hash_str, None)
+        msg = self.msgs.get(hash_str, None)
+
+        if msg is not None:
+            return msg
+
+        return self.state.all_tips.get(hash_str, None)
 
     def get_direct_children(self, msg_id: str) -> dict[str, Message]:
         if msg_id not in self.msgs:
@@ -175,19 +232,21 @@ class Tangle:
         )
 
     def get_transaction_index(self, address: str) -> int:
-        return sum(1 for m in self.msgs.values() if m.address == address)
+        return sum(1 for m in self.all_msgs.values() if m.address == address)
 
-    def find_msg_from_id(self, msg_id: str):
-        if msg_id not in self.msgs:
-            return None
-
-        return self.msgs[msg_id]
-
-    def create_new_branch(self, msg: Message):
+    def create_new_branch(self, msg: Message, conflict: Message):
         if msg.hash in self.branches:
             return
 
-        self.branches[msg.hash] = {msg.hash: msg}
+        # TODO: check if the conflicting branch is already finalized
+
+        # Recursively finding the conflicting branch
+        conflict_branch = {conflict.hash: conflict, **self.find_children(conflict)}
+
+        self.branches[(msg.node_id, msg.index)] = [
+            {msg.hash: msg},
+            {conflict.hash: conflict_branch},
+        ]
 
     @lru_cache(maxsize=64)
     def get_difficulty(self, msg: Message):

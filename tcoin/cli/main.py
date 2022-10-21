@@ -1,4 +1,3 @@
-import socket
 from typing import Callable
 
 import typer
@@ -107,6 +106,12 @@ def send(tangle: Tangle, node: Node):
 
     index = tangle.get_transaction_index(node.wallet.address)
 
+    index = inquirer.number(
+        message="Index:", default=index, validate=EmptyInputValidator()
+    ).execute()
+
+    index = int(index)
+
     msg = node.create_message(Transaction, index=index, payload=payload.to_dict())
 
     msg.select_parents(tangle)
@@ -200,6 +205,8 @@ def start():
         validate=EmptyInputValidator(),
     ).execute()
 
+    port = int(port)
+
     pk = inquirer.secret(
         message="Your Private Key:",
         validate=EmptyInputValidator(),
@@ -220,7 +227,7 @@ def start():
 
         node = Node(
             host="",
-            port=80,
+            port=port,
             tangle=tangle,
             wallet=wallet,
             full_node=full_node,
