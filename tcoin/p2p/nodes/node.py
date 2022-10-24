@@ -240,7 +240,7 @@ class Node(Threaded):
         return msg
 
     def add_new_msg(self, msg: Message):
-        if msg.hash in self.tangle.msgs:
+        if msg.hash in self.tangle.all_msgs:
             return
 
         result = msg.is_valid(self.tangle)

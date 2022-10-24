@@ -117,7 +117,7 @@ class Tangle:
     def __init__(
         self,
         msgs: dict[str, Message] = {},
-        branches: dict[str, list[dict[str, Message]]] = {},
+        branches: dict[tuple[str, int], list[dict[str, Message]]] = {},
         state: TangleState = None,
     ):
         if state is None:
@@ -201,10 +201,8 @@ class Tangle:
 
                     self.add_approved_msg(p_msg)
 
-                for _id, branches in self.branches.items():
-                    for b in branches:
-                        if p in b:
-                            branches.append(_id)
+                for _id in self.branches:
+                    branches += self.find_occurs_in_branch(_id, p)
 
             if branches:
                 ...
@@ -242,9 +240,23 @@ class Tangle:
     def get_transaction_index(self, address: str) -> int:
         return sum(1 for m in self.all_msgs.values() if m.address == address)
 
+    def find_occurs_in_branch(self, branch_id: tuple[str, int], msg_id: str) -> list:
+        occurs = [b for b in self.branches[branch_id] if msg_id in b]
+
+        return occurs
+
     def create_new_branch(self, msg: Message, conflict: Message):
-        if msg.hash in self.branches:
-            return
+        branch_id = (msg.node_id, msg.index)
+
+        if branch_id in self.branches:
+            occurs = self.find_occurs_in_branch(branch_id, msg.hash)
+
+            if occurs:
+                return
+
+            if occurs == []:
+                self.branches[branch_id].append({msg.hash: msg})
+                return
 
         # TODO: check if the conflicting branch is already finalized
 
@@ -254,7 +266,7 @@ class Tangle:
             **self.find_children(conflict.node_id),
         }
 
-        self.branches[(msg.node_id, msg.index)] = [
+        self.branches[branch_id] = [
             {msg.hash: msg},
             {conflict.hash: conflict_branch},
         ]
