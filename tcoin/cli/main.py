@@ -64,19 +64,18 @@ def node_stats(_, node: Node):
 
 
 def tangle_stats(tangle: Tangle, _):
-    msg_amt = len(tangle.msgs)
-
-    t_amt = 0
     sent = 0
 
     for t in tangle.msgs.values():
         if isinstance(t, Transaction):
             sent += t.get_transaction().amt
-            t_amt += 1
+
+    msg_total = len(tangle.all_msgs)
+    unverified = len(tangle.state.all_tips)
 
     Send.primary(
-        f"Total Messages: {msg_amt}\n"
-        f"Total Transactions: {t_amt}\n"
+        f"Total Messages: {msg_total}\n"
+        f"Unverified Message: {unverified}\n"
         f"Total Sent: {sent}"
     )
 

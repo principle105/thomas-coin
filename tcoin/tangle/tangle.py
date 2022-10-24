@@ -81,8 +81,8 @@ class TangleState:
         self.strong_tips = self.purge_tips(self.strong_tips)
         self.weak_tips = self.purge_tips(self.weak_tips)
 
-        if self.all_tips == []:
-            return [genesis_msg.hash]
+        if self.all_tips == {}:
+            return {genesis_msg.hash: 0}
 
         amt = min(len(self.all_tips), MAX_PARENTS)
 
@@ -147,14 +147,14 @@ class Tangle:
         self.msgs[msg.hash] = msg
         msg.update_state(self)
 
-    def _find_children(
+    def find_children(
         self,
         msg_id: str,
         *,
         stop: int = None,
         total: dict[str, Message] = {},
     ) -> list[Message]:
-        # TODO: Check if the message is part of a branch based on the parents
+        # Recursively finding all the children
 
         children = {_id: m for _id, m in self.all_msgs.items() if msg_id in m.parents}
 
@@ -167,21 +167,21 @@ class Tangle:
                 return total
 
         for c in children:
-            total = self._find_children(c, stop=stop, total=total)
+            total = self.find_children(c, stop=stop, total=total)
 
         return total
-
-    def find_children(self, msg: Message, stop: int = None) -> list[Message]:
-        # Recursively finding all children
-        return self._find_children(msg.hash, stop=stop)
 
     def add_msg(self, msg: Message, invalid_parents: list[str] = []):
         # Updating the state without approval if it's the genesis message
         if msg.hash == genesis_msg.hash:
             self.add_approved_msg(msg)
+            return
 
         # Only validating tips if the message does not contain invalid parents
         if not invalid_parents:
+            # The branches that the message is part of
+            branches = []
+
             for p, t in msg.parents.items():
                 if p == genesis_msg.hash:
                     continue
@@ -190,7 +190,7 @@ class Tangle:
 
                 # Getting the total amount of children of the parent tip
                 # TODO: cache the child count
-                total_children = len(self.find_children(p_msg))
+                total_children = len(self.find_children(p))
 
                 if total_children > 1:
                     if t == 0:
@@ -200,6 +200,14 @@ class Tangle:
                         del self.state.weak_tips[p]
 
                     self.add_approved_msg(p_msg)
+
+                for _id, branches in self.branches.items():
+                    for b in branches:
+                        if p in b:
+                            branches.append(_id)
+
+            if branches:
+                ...
 
             self.state.strong_tips[msg.hash] = msg
 
@@ -225,7 +233,7 @@ class Tangle:
         return next(
             (
                 m
-                for m in self.msgs.values()
+                for m in self.all_msgs.values()
                 if m.address == address and m.index == index
             ),
             None,
@@ -241,7 +249,10 @@ class Tangle:
         # TODO: check if the conflicting branch is already finalized
 
         # Recursively finding the conflicting branch
-        conflict_branch = {conflict.hash: conflict, **self.find_children(conflict)}
+        conflict_branch = {
+            conflict.hash: conflict,
+            **self.find_children(conflict.node_id),
+        }
 
         self.branches[(msg.node_id, msg.index)] = [
             {msg.hash: msg},

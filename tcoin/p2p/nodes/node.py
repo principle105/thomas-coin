@@ -282,6 +282,13 @@ class Node(Threaded):
         if duplicate is not None:
             # Creating a new branch
             self.tangle.create_new_branch(msg, duplicate)
+            return
+
+        index = self.tangle.get_transaction_index(msg.node_id)
+
+        # Checking if the transaction index is correct
+        if index != msg.index:
+            return
 
         # Adding the message to the tangle if it doesn't exist yet
         self.tangle.add_msg(msg, invalid_parents)
