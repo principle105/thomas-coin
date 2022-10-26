@@ -263,7 +263,7 @@ class Node(Threaded):
 
                 # Getting the children of a message if the message is past a certain age
                 if age >= request_children_after:
-                    all_tips = list(self.tangle.state.all_tips)
+                    all_tips = list(self.tangle.all_tips)
                     self.request_msgs(initial=msg, msgs=all_tips, history=True)
 
                 else:

@@ -71,7 +71,7 @@ def tangle_stats(tangle: Tangle, _):
             sent += t.get_transaction().amt
 
     msg_total = len(tangle.all_msgs)
-    unverified = len(tangle.state.all_tips)
+    unverified = len(tangle.all_tips)
 
     Send.primary(
         f"Total Messages: {msg_total}\n"
@@ -221,7 +221,7 @@ def start():
     ).execute()
 
     with Send.spinner("Starting Node") as sp:
-        tangle = Tangle.from_save()
+        tangle = Tangle.from_save(wallet)
         sp.write("- Loaded tangle from save")
 
         node = Node(
@@ -302,7 +302,7 @@ def start():
 
     node.stop()
 
-    tangle.save()
+    tangle.save(node.wallet)
 
 
 @app.command()

@@ -135,7 +135,7 @@ class Message(SignedPayload):
         ...
 
     def select_parents(self, tangle: "Tangle"):
-        self.parents = tangle.state.select_tips()
+        self.parents = tangle.select_tips()
 
     def do_work(self, tangle: "Tangle"):
         raw_data = self.get_raw_data()

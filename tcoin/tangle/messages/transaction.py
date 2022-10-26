@@ -54,4 +54,4 @@ class Transaction(Message):
         return True
 
     def update_state(self, tangle: "Tangle"):
-        tangle.state.add_transaction(self)
+        tangle.state.update_tx_on_tangle(self)

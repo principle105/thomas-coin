@@ -10,9 +10,11 @@ from tcoin.constants import (
     MAX_TIP_AGE,
     TIME_WINDOW,
 )
-from tcoin.utils import load_storage_file, save_storage_file
+from tcoin.utils import get_raw_hash, load_storage_file, save_storage_file
+from tcoin.wallet import Wallet
 
 from .messages import Message, Transaction, genesis_msg, message_lookup
+from .signed import Signed
 
 TANGLE_PATH = "tangle"
 
@@ -21,17 +23,11 @@ class TangleState:
     """Keeps track of the tangle's current state"""
 
     def __init__(
-        self,
-        strong_tips: dict[str, Message] = {},
-        weak_tips: dict[str, Message] = {},
-        wallets: dict[str, int] = {},
+        self, wallets: dict[str, int] = {}, invalid_msg_pool: dict[str, int] = {}
     ):
-        self.strong_tips = strong_tips  # hash: msg
-        self.weak_tips = weak_tips  # hash: msg
-
         self.wallets = wallets  # address: balance
 
-        self.invalid_msg_pool: dict[str, int] = {}  # hash: timestamp of last access
+        self.invalid_msg_pool = invalid_msg_pool  # hash: timestamp of last access
 
     def add_invalid_msg(self, msg_hash: str):
         self.invalid_msg_pool[msg_hash] = int(time.time())
@@ -57,48 +53,18 @@ class TangleState:
 
         return in_pool
 
-    def purge_tips(self, tips):
-        current_time = time.time()
-
-        purged_tips = {
-            _id: msg
-            for _id, msg in tips.items()
-            if msg.timestamp + MAX_TIP_AGE >= current_time
-        }
-
-        # Checking for the genesis message only once per purge
-        if genesis_msg.hash in tips:
-            purged_tips[genesis_msg.hash] = tips[genesis_msg.hash]
-
-        return purged_tips
-
-    @property
-    def all_tips(self):
-        return {**self.strong_tips, **self.weak_tips}
-
-    def select_tips(self):
-        # Purging tips that are too old
-        self.strong_tips = self.purge_tips(self.strong_tips)
-        self.weak_tips = self.purge_tips(self.weak_tips)
-
-        if self.all_tips == {}:
-            return {genesis_msg.hash: 0}
-
-        amt = min(len(self.all_tips), MAX_PARENTS)
-
-        tip_ids = random.sample(self.all_tips.keys(), amt)
-
-        # Mapping the tips to their tip type
-        return {_id: int(_id in self.weak_tips) for _id in tip_ids}
-
     def get_raw_balance(self, address: str) -> list:
         return self.wallets.get(address, [])
 
     def get_balance(self, address: str):
         return self.wallets.get(address, 0)
 
-    def add_transaction(self, msg: Transaction):
+    def update_tx_on_tangle(self, msg: Transaction, add: bool = True):
         t = msg.get_transaction()
+
+        # Simulating removing the transaction from the tangle
+        if add is False:
+            t.amt *= -1
 
         sender_bal = self.get_balance(msg.node_id) - t.amt
         receiver_bal = self.get_balance(t.receiver) + t.amt
@@ -113,18 +79,29 @@ class TangleState:
         self.wallets[t.receiver] = receiver_bal
 
 
-class Tangle:
+class Tangle(Signed):
     def __init__(
         self,
+        *,
         msgs: dict[str, Message] = {},
         branches: dict[tuple[str, int], list[dict[str, Message]]] = {},
+        strong_tips: dict[str, Message] = {},
+        weak_tips: dict[str, Message] = {},
         state: TangleState = None,
+        hash: str = None,
+        signature: str = None,
     ):
+
+        super().__init__(hash=hash, signature=signature)
+
         if state is None:
             state = TangleState()
 
         # State of the main tangle
         self.state = state
+
+        self.strong_tips = strong_tips  # hash: msg
+        self.weak_tips = weak_tips  # hash: msg
 
         # Main branch messages
         self.msgs = msgs
@@ -140,8 +117,48 @@ class Tangle:
         return self.state.get_balance
 
     @property
+    def all_tips(self):
+        return {**self.strong_tips, **self.weak_tips}
+
+    @property
     def all_msgs(self):
-        return {**self.msgs, **self.state.all_tips}
+        return {**self.msgs, **self.all_tips}
+
+    def purge_tips(self, tips):
+        current_time = time.time()
+
+        valid_tips, invalid_tips = {}, {}
+
+        for _id, msg in tips.items():
+            if msg.timestamp + MAX_TIP_AGE >= current_time:
+                valid_tips[_id] = msg
+            else:
+                invalid_tips[_id] = msg
+
+        # Updating the state to reflect the removal of the invalid tips
+        for _id, msg in invalid_tips.items():
+            self.state.update_tx_on_tangle(msg, add=False)
+
+        # Checking for the genesis message only once per purge
+        if genesis_msg.hash in tips:
+            valid_tips[genesis_msg.hash] = tips[genesis_msg.hash]
+
+        return valid_tips
+
+    def select_tips(self):
+        # Purging tips that are too old
+        self.strong_tips = self.purge_tips(self.strong_tips)
+        self.weak_tips = self.purge_tips(self.weak_tips)
+
+        if self.all_tips == {}:
+            return {genesis_msg.hash: 0}
+
+        amt = min(len(self.all_tips), MAX_PARENTS)
+
+        tip_ids = random.sample(self.all_tips.keys(), amt)
+
+        # Mapping the tips to their tip type
+        return {_id: int(_id in self.weak_tips) for _id in tip_ids}
 
     def add_approved_msg(self, msg: Message):
         self.msgs[msg.hash] = msg
@@ -188,18 +205,18 @@ class Tangle:
 
                 p_msg: Message = self.get_msg(p)
 
-                # Getting the total amount of children of the parent tip
-                # TODO: cache the child count
-                total_children = len(self.find_children(p))
+                if p in self.all_tips:
+                    # Getting the total amount of children of the parent tip
+                    # TODO: cache the child count
+                    total_children = len(self.find_children(p))
 
-                if total_children > 1:
-                    if t == 0:
-                        del self.state.strong_tips[p]
+                    if total_children > 1:
+                        if t == 0:
+                            del self.strong_tips[p]
+                        else:
+                            del self.weak_tips[p]
 
-                    else:
-                        del self.state.weak_tips[p]
-
-                    self.add_approved_msg(p_msg)
+                        self.add_approved_msg(p_msg)
 
                 for _id in self.branches:
                     branches += self.find_occurs_in_branch(_id, p)
@@ -207,11 +224,14 @@ class Tangle:
             if branches:
                 ...
 
-            self.state.strong_tips[msg.hash] = msg
+            self.strong_tips[msg.hash] = msg
 
         else:
             # If there are invalid parents, the tip is added to the weak pool
-            self.state.weak_tips[msg.hash] = msg
+            self.weak_tips[msg.hash] = msg
+
+        # Updating the state
+        self.state.update_tx_on_tangle(msg)
 
     def get_msg(self, hash_str: str):
         msg = self.msgs.get(hash_str, None)
@@ -219,7 +239,7 @@ class Tangle:
         if msg is not None:
             return msg
 
-        return self.state.all_tips.get(hash_str, None)
+        return self.all_tips.get(hash_str, None)
 
     def get_direct_children(self, msg_id: str) -> dict[str, Message]:
         if msg_id not in self.msgs:
@@ -241,6 +261,7 @@ class Tangle:
         return sum(1 for m in self.all_msgs.values() if m.address == address)
 
     def find_occurs_in_branch(self, branch_id: tuple[str, int], msg_id: str) -> list:
+        # TODO: make sure it's not part of the main branch
         occurs = [b for b in self.branches[branch_id] if msg_id in b]
 
         return occurs
@@ -288,11 +309,36 @@ class Tangle:
     def get_msgs_as_dict(self):
         return [m.to_dict() for m in self.msgs.values()]
 
-    @classmethod
-    def from_dict(cls, tangle_data: list):
-        tangle = cls()
+    def get_tips_as_dict(self, tips: dict[str, Message]):
+        # Converts the tips to a dict
+        return [msg.to_dict() for msg in tips.values()]
 
-        for m_data in reversed(tangle_data):
+    def to_dict(self):
+        return {
+            "msgs": self.get_msgs_as_dict(),
+            "strong_tips": self.get_tips_as_dict(self.strong_tips),
+            "weak_tips": self.get_tips_as_dict(self.weak_tips),
+            "signature": self.signature,
+        }
+
+    def add_hash(self):
+        self.hash = get_raw_hash("".join(str(s) for s in self.to_dict()))
+
+    @classmethod
+    def from_dict(cls, data: dict, wallet: Wallet):
+        tangle_data = data.get("msgs", None)
+        strong_tips_data = data.get("strong_tips", None)
+        weak_tips_data = data.get("weak_tips", None)
+
+        signature = data.get("signature", None)
+
+        if None in (tangle_data, strong_tips_data, weak_tips_data, signature):
+            return cls()
+
+        tangle = cls(signature=signature)
+
+        # Adding the messages to the tangle
+        for m_data in list(reversed(tangle_data)) + strong_tips_data + weak_tips_data:
             msg = message_lookup(m_data)
 
             if msg is None:
@@ -304,13 +350,29 @@ class Tangle:
             # Not validating the message as it is already in the tangle
             tangle.add_msg(msg)
 
+        tangle.add_hash()
+
+        # Checking if the data was tampered
+        if (
+            Wallet.is_signature_valid(
+                address=wallet.address, signature=tangle.signature, msg=tangle.hash
+            )
+            is False
+        ):
+            return cls()
+
         return tangle
 
-    def save(self):
-        save_storage_file(TANGLE_PATH, self.get_msgs_as_dict())
+    def save(self, wallet: Wallet):
+        # Signing the tangle to prevent tampering
+        self.add_hash()
+        self.sign(wallet)
+
+        # Saving the tangle to a file
+        save_storage_file(TANGLE_PATH, self.to_dict())
 
     @classmethod
-    def from_save(cls):
+    def from_save(cls, wallet: Wallet):
         tangle_data = load_storage_file(TANGLE_PATH)
 
-        return cls.from_dict(tangle_data)
+        return cls.from_dict(tangle_data, wallet)
