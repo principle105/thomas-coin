@@ -13,7 +13,7 @@ from tcoin.utils import check_var_types, get_pow_hash, get_target, is_valid_hash
 from ..signed import Signed
 
 if TYPE_CHECKING:
-    from ..tangle import Tangle
+    from ..tangle import Tangle, TangleState
 
 
 def generate_message_lookup(msg_types: list["Message"]):
@@ -127,8 +127,8 @@ class Message(SignedPayload):
 
         self.nonce = nonce
 
-    def update_state(self, tangle: "Tangle"):
-        """Updates the tangle with a message"""
+    def update_state(self, state: "TangleState"):
+        """Updates the tangle state with a message"""
         ...
 
     def is_payload_valid(self, tangle: "Tangle") -> bool:
@@ -203,7 +203,7 @@ class Message(SignedPayload):
 
         return True
 
-    def is_valid(self, tangle: "Tangle", depth=2) -> bool:
+    def is_valid(self, tangle: "Tangle", depth=2):
         """Checks if the message is valid"""
 
         depth -= 1

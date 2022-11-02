@@ -1,1 +1,1 @@
-from .tangle import Tangle
+from .tangle import BranchReference, Tangle, TangleState

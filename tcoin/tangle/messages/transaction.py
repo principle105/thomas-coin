@@ -4,7 +4,7 @@ from tcoin.constants import MIN_SEND_AMT
 from tcoin.utils import check_var_types
 
 if TYPE_CHECKING:
-    from tcoin.tangle import Tangle
+    from tcoin.tangle import TangleState, Tangle
 
 from .message import Message
 from .payload import Payload
@@ -53,5 +53,5 @@ class Transaction(Message):
 
         return True
 
-    def update_state(self, tangle: "Tangle"):
-        tangle.state.update_tx_on_tangle(self)
+    def update_state(self, state: "TangleState"):
+        state.update_tx_on_tangle(self)

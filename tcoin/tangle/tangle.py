@@ -1,5 +1,6 @@
 import random
 import time
+from collections import Counter
 from functools import lru_cache
 
 from tcoin.config import invalid_msg_pool_purge_time, invalid_msg_pool_size
@@ -78,13 +79,77 @@ class TangleState:
 
         self.wallets[t.receiver] = receiver_bal
 
+    def merge(self, state: "TangleState"):
+        # Merging the wallet states
+        wallets = dict(Counter(self.wallets) + Counter(state.wallets))
+
+        # Merging the invalid message pool
+        invalid_msg_pools = dict(
+            Counter(self.invalid_msg_pool) + Counter(state.invalid_msg_pool)
+        )
+
+        return TangleState(wallets, invalid_msg_pools)
+
+    def get_branch_state(self, ref: "BranchReference"):
+        branch_state = ref.branch.state
+        main_branch_state = ref.branch_manager.main_branch.state
+
+        # Merging the two states
+        new_state: TangleState = self.merge(self, branch_state).merge(
+            main_branch_state, False
+        )
+
+        return new_state
+
+
+class Branch:
+    def __init__(
+        self,
+        msgs: dict[str, Message] = {},
+        state: "TangleState" = None,
+    ):
+        if state is None:
+            state = TangleState()
+
+        self.msgs = msgs
+        self.state = state
+
+    def add_msgs(self, data: list[Message]):
+        for d in data:
+            self.add_msg(d)
+
+    def add_msg(self, msg: Message):
+        self.msgs[msg.hash] = msg
+
+        msg.update_state(self.state)
+
+
+class BranchManager:
+    def __init__(
+        self, node_id: str, index: int, conflicts: list[Branch], main_branch: Branch
+    ):
+        self.node_id = node_id
+        self.index = index
+
+        self.conflicts = conflicts
+        self.main_branch = main_branch
+
+    def add_conflict(self, branch: Branch):
+        self.conflicts.append(branch)
+
+
+class BranchReference:
+    def __init__(self, branch: Branch, branch_manager: BranchManager):
+        self.branch = branch
+        self.branch_manager = branch_manager
+
 
 class Tangle(Signed):
     def __init__(
         self,
         *,
         msgs: dict[str, Message] = {},
-        branches: dict[tuple[str, int], list[dict[str, Message]]] = {},
+        branches: dict[tuple[str, int], BranchManager] = {},
         strong_tips: dict[str, Message] = {},
         weak_tips: dict[str, Message] = {},
         state: TangleState = None,
@@ -107,14 +172,10 @@ class Tangle(Signed):
         self.msgs = msgs
 
         # Conflicting branches
-        self.branches = branches  # (node_id, index): [{msg_hash: Message, ...}, ...]
+        self.branches = branches  # (node_id, index): BranchManager
 
         if not self.msgs:
             self.add_msg(genesis_msg)
-
-    @property
-    def get_balance(self):
-        return self.state.get_balance
 
     @property
     def all_tips(self):
@@ -123,6 +184,10 @@ class Tangle(Signed):
     @property
     def all_msgs(self):
         return {**self.msgs, **self.all_tips}
+
+    @property
+    def get_balance(self):
+        return self.state.get_balance
 
     def purge_tips(self, tips):
         current_time = time.time()
@@ -162,7 +227,7 @@ class Tangle(Signed):
 
     def add_approved_msg(self, msg: Message):
         self.msgs[msg.hash] = msg
-        msg.update_state(self)
+        msg.update_state(self.state)
 
     def find_children(
         self,
@@ -170,7 +235,7 @@ class Tangle(Signed):
         *,
         stop: int = None,
         total: dict[str, Message] = {},
-    ) -> list[Message]:
+    ) -> dict[str, Message]:
         # Recursively finding all the children
 
         children = {_id: m for _id, m in self.all_msgs.items() if msg_id in m.parents}
@@ -260,9 +325,23 @@ class Tangle(Signed):
     def get_transaction_index(self, address: str) -> int:
         return sum(1 for m in self.all_msgs.values() if m.address == address)
 
-    def find_occurs_in_branch(self, branch_id: tuple[str, int], msg_id: str) -> list:
-        # TODO: make sure it's not part of the main branch
-        occurs = [b for b in self.branches[branch_id] if msg_id in b]
+    def find_occurs_in_branch(
+        self, msg_ids: set[str], branch_id: tuple[str, int] = None
+    ) -> list[Branch]:
+        if branch_id is None:
+            occurs = []
+
+            for _id in self.branches:
+                occurs += self.find_occurs_in_branch(msg_ids, _id)
+
+            return occurs
+
+        branch = self.branches.get(branch_id, None)
+
+        if branch is None:
+            return []
+
+        occurs = [b for b in branch.conflicts if msg_ids.isdisjoint(set(b.msgs))]
 
         return occurs
 
@@ -270,27 +349,42 @@ class Tangle(Signed):
         branch_id = (msg.node_id, msg.index)
 
         if branch_id in self.branches:
-            occurs = self.find_occurs_in_branch(branch_id, msg.hash)
+            msg_ids = {
+                msg.hash,
+            }
+
+            # Finding which conflicts the message is part of
+            occurs = self.find_occurs_in_branch(msg_ids, branch_id=branch_id)
 
             if occurs:
                 return
 
             if occurs == []:
-                self.branches[branch_id].append({msg.hash: msg})
+                branch = Branch()
+                branch.add_msg(msg)
+
+                self.branches[branch_id].add_conflict(branch)
+
                 return
 
         # TODO: check if the conflicting branch is already finalized
 
-        # Recursively finding the conflicting branch
-        conflict_branch = {
-            conflict.hash: conflict,
-            **self.find_children(conflict.node_id),
-        }
+        children = self.find_children(conflict.node_id)
 
-        self.branches[branch_id] = [
-            {msg.hash: msg},
-            {conflict.hash: conflict_branch},
-        ]
+        # Recursively finding the conflicting branch
+        conflict_branch = [conflict] + list(children.values())
+
+        branch, c_branch = Branch(), Branch()
+
+        branch.add_msg(msg)
+        c_branch.add_msgs(conflict_branch)
+
+        self.branches[branch_id] = BranchManager(
+            node_id=msg.node_id,
+            index=msg.index,
+            conflicts=[c_branch],
+            main_branch=branch,
+        )
 
     @lru_cache(maxsize=64)
     def get_difficulty(self, msg: Message):
@@ -326,6 +420,7 @@ class Tangle(Signed):
 
     @classmethod
     def from_dict(cls, data: dict, wallet: Wallet):
+        # TODO: save the branches
         tangle_data = data.get("msgs", None)
         strong_tips_data = data.get("strong_tips", None)
         weak_tips_data = data.get("weak_tips", None)

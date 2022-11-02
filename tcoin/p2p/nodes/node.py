@@ -5,7 +5,7 @@ import string
 import time
 
 from tcoin.config import request_children_after
-from tcoin.tangle import Tangle
+from tcoin.tangle import BranchReference, Tangle
 from tcoin.tangle.messages import Message, message_lookup
 from tcoin.utils import load_storage_file, save_storage_file
 from tcoin.wallet import Wallet
@@ -249,16 +249,13 @@ class Node(Threaded):
             return
 
         invalid_parents = []
+        parents_in_branch: set[str] = set()
 
         if result is not True:
             invalid_parents, unknown_parents = result
 
             # Checking if the message is not weak
             if not invalid_parents:
-                # TODO: check if the unknown parents are part of a branch
-
-                # TODO: Add the message to the branch
-
                 age = time.time() - msg.timestamp
 
                 # Getting the children of a message if the message is past a certain age
@@ -266,10 +263,32 @@ class Node(Threaded):
                     all_tips = list(self.tangle.all_tips)
                     self.request_msgs(initial=msg, msgs=all_tips, history=True)
 
-                else:
-                    self.request_msgs(initial=msg, msgs=unknown_parents)
+                    return
 
-                return
+                # Checking if the unknown messages are part of a branch
+                occurs = self.tangle.find_occurs_in_branch(set(invalid_parents))
+
+                unknown_parents = set(unknown_parents)
+
+                parents_in_branch = set(
+                    sum([list(set(b.msgs) & unknown_parents) for b in occurs], [])
+                )
+
+                still_unknown = unknown_parents - parents_in_branch
+
+                if still_unknown:
+                    # Only requesting messages that are still unknown (not part of a branch)
+                    self.request_msgs(initial=msg, msgs=still_unknown)
+
+                    return
+
+        if parents_in_branch:
+            # Genearating the state of the conflicting branch
+            ...
+
+            self.tangle.get_balance()
+
+            return
 
         # Checking if the payload is valid all parents are known about
         if msg.is_payload_valid(self.tangle) is False:
@@ -289,6 +308,8 @@ class Node(Threaded):
         # Checking if the transaction index is correct
         if index != msg.index:
             return
+
+        # TODO: add the message to the correct branch
 
         # Adding the message to the tangle if it doesn't exist yet
         self.tangle.add_msg(msg, invalid_parents)
