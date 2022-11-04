@@ -184,9 +184,12 @@ def view_branch(tangle: Tangle, node: Node):
     Send.primary(f"\n\nBranch ID: {branch_id}")
 
     for i, b in enumerate(branch.conflicts):
-        Send.secondary(f"Branch: {i}")
+        Send.secondary(f"Branch: {i} - {len(b.msgs)}")
 
-        balance = tangle.get_balance(node.wallet.address, ref=b)
+        state = tangle.state.merge(b.state).merge(branch.main_branch.state, add=False)
+
+        balance = state.get_balance(branch_id[0])
+
         Send.regular(f"Branch Balance: {balance}")
 
     Send.regular("\n\n")

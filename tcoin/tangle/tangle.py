@@ -24,8 +24,14 @@ class TangleState:
     """Keeps track of the tangle's current state"""
 
     def __init__(
-        self, wallets: dict[str, int] = {}, invalid_msg_pool: dict[str, int] = {}
+        self, wallets: dict[str, int] = None, invalid_msg_pool: dict[str, int] = None
     ):
+        if wallets is None:
+            wallets = {}
+
+        if invalid_msg_pool is None:
+            invalid_msg_pool = {}
+
         self.wallets = wallets  # address: balance
 
         self.invalid_msg_pool = invalid_msg_pool  # hash: timestamp of last access
@@ -79,35 +85,33 @@ class TangleState:
 
         self.wallets[t.receiver] = receiver_bal
 
-    def merge(self, state: "TangleState"):
+    def add_dict_states(self, x: dict, y: dict, add=True) -> dict:
+        if add:
+            return {k: x.get(k, 0) + y.get(k, 0) for k in x | y}
+
+        return {k: x.get(k, 0) - y.get(k, 0) for k in x | y}
+
+    def merge(self, state: "TangleState", add=True):
         # Merging the wallet states
-        wallets = dict(Counter(self.wallets) + Counter(state.wallets))
+        wallets = self.add_dict_states(self.wallets, state.wallets, add)
 
         # Merging the invalid message pool
-        invalid_msg_pools = dict(
-            Counter(self.invalid_msg_pool) + Counter(state.invalid_msg_pool)
+        invalid_msg_pool = self.add_dict_states(
+            self.invalid_msg_pool, state.invalid_msg_pool, add
         )
 
-        return TangleState(wallets, invalid_msg_pools)
-
-    def get_branch_state(self, ref: "BranchReference"):
-        branch_state = ref.branch.state
-        main_branch_state = ref.branch_manager.main_branch.state
-
-        # Merging the two states
-        new_state: TangleState = self.merge(self, branch_state).merge(
-            main_branch_state, False
-        )
-
-        return new_state
+        return TangleState(wallets, invalid_msg_pool)
 
 
 class Branch:
     def __init__(
         self,
-        msgs: dict[str, Message] = {},
+        msgs: dict[str, Message] = None,
         state: "TangleState" = None,
     ):
+        if msgs is None:
+            msgs = {}
+
         if state is None:
             state = TangleState()
 
@@ -118,10 +122,28 @@ class Branch:
         for d in data:
             self.add_msg(d)
 
-    def add_msg(self, msg: Message):
+    def add_msg(self, msg: Message, invalid_parents: list[str] = []):
+        # TODO: add support for tips
         self.msgs[msg.hash] = msg
 
         msg.update_state(self.state)
+
+    def to_dict(self):
+        return {"msgs": [m.to_dict() for m in self.msgs.values()]}
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        branch = cls()
+
+        for msg in data["msgs"]:
+            msg = message_lookup(msg)
+
+            if msg is None:
+                continue
+
+            branch.add_msg(msg)
+
+        return branch
 
 
 class BranchManager:
@@ -137,11 +159,32 @@ class BranchManager:
     def add_conflict(self, branch: Branch):
         self.conflicts.append(branch)
 
+    @property
+    def id(self):
+        return (self.node_id, self.index)
+
+    def to_dict(self):
+        return {
+            "node_id": self.node_id,
+            "index": self.index,
+            "conflicts": [c.to_dict() for c in self.conflicts],
+            "main_branch": self.main_branch.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(
+            node_id=data["node_id"],
+            index=data["index"],
+            conflicts=[Branch.from_dict(c) for c in data["conflicts"]],
+            main_branch=Branch.from_dict(data["main_branch"]),
+        )
+
 
 class BranchReference:
-    def __init__(self, branch: Branch, branch_manager: BranchManager):
+    def __init__(self, branch: Branch, manager: BranchManager):
         self.branch = branch
-        self.branch_manager = branch_manager
+        self.manager = manager
 
 
 class Tangle(Signed):
@@ -261,9 +304,6 @@ class Tangle(Signed):
 
         # Only validating tips if the message does not contain invalid parents
         if not invalid_parents:
-            # The branches that the message is part of
-            branches = []
-
             for p, t in msg.parents.items():
                 if p == genesis_msg.hash:
                     continue
@@ -282,12 +322,6 @@ class Tangle(Signed):
                             del self.weak_tips[p]
 
                         self.add_approved_msg(p_msg)
-
-                for _id in self.branches:
-                    branches += self.find_occurs_in_branch(_id, p)
-
-            if branches:
-                ...
 
             self.strong_tips[msg.hash] = msg
 
@@ -327,7 +361,7 @@ class Tangle(Signed):
 
     def find_occurs_in_branch(
         self, msg_ids: set[str], branch_id: tuple[str, int] = None
-    ) -> list[Branch]:
+    ) -> list[BranchReference]:
         if branch_id is None:
             occurs = []
 
@@ -336,12 +370,16 @@ class Tangle(Signed):
 
             return occurs
 
-        branch = self.branches.get(branch_id, None)
+        manager = self.branches.get(branch_id, None)
 
-        if branch is None:
+        if manager is None:
             return []
 
-        occurs = [b for b in branch.conflicts if msg_ids.isdisjoint(set(b.msgs))]
+        occurs = [
+            BranchReference(b, manager)
+            for b in manager.conflicts
+            if msg_ids & set(b.msgs)
+        ]
 
         return occurs
 
@@ -382,8 +420,8 @@ class Tangle(Signed):
         self.branches[branch_id] = BranchManager(
             node_id=msg.node_id,
             index=msg.index,
-            conflicts=[c_branch],
-            main_branch=branch,
+            conflicts=[branch],
+            main_branch=c_branch,
         )
 
     @lru_cache(maxsize=64)
@@ -407,9 +445,13 @@ class Tangle(Signed):
         # Converts the tips to a dict
         return [msg.to_dict() for msg in tips.values()]
 
+    def get_branches_as_dict(self):
+        return [m.to_dict() for m in self.branches.values()]
+
     def to_dict(self):
         return {
             "msgs": self.get_msgs_as_dict(),
+            "branches": self.get_branches_as_dict(),
             "strong_tips": self.get_tips_as_dict(self.strong_tips),
             "weak_tips": self.get_tips_as_dict(self.weak_tips),
             "signature": self.signature,
@@ -424,6 +466,7 @@ class Tangle(Signed):
         tangle_data = data.get("msgs", None)
         strong_tips_data = data.get("strong_tips", None)
         weak_tips_data = data.get("weak_tips", None)
+        branch_data = data.get("branches", None)
 
         signature = data.get("signature", None)
 
@@ -444,6 +487,9 @@ class Tangle(Signed):
 
             # Not validating the message as it is already in the tangle
             tangle.add_msg(msg)
+
+        # Adding the branches
+        tangle.branches = {(m := BranchManager.from_dict(b)).id: m for b in branch_data}
 
         tangle.add_hash()
 

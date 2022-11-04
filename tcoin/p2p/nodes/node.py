@@ -5,7 +5,7 @@ import string
 import time
 
 from tcoin.config import request_children_after
-from tcoin.tangle import BranchReference, Tangle
+from tcoin.tangle import Tangle
 from tcoin.tangle.messages import Message, message_lookup
 from tcoin.utils import load_storage_file, save_storage_file
 from tcoin.wallet import Wallet
@@ -249,7 +249,7 @@ class Node(Threaded):
             return
 
         invalid_parents = []
-        parents_in_branch: set[str] = set()
+        occurs = []
 
         if result is not True:
             invalid_parents, unknown_parents = result
@@ -266,34 +266,23 @@ class Node(Threaded):
                     return
 
                 # Checking if the unknown messages are part of a branch
-                occurs = self.tangle.find_occurs_in_branch(set(invalid_parents))
+                occurs = self.tangle.find_occurs_in_branch(set(unknown_parents))
 
                 unknown_parents = set(unknown_parents)
 
                 parents_in_branch = set(
-                    sum([list(set(b.msgs) & unknown_parents) for b in occurs], [])
+                    sum(
+                        [list(set(r.branch.msgs) & unknown_parents) for r in occurs], []
+                    )
                 )
 
                 still_unknown = unknown_parents - parents_in_branch
 
                 if still_unknown:
                     # Only requesting messages that are still unknown (not part of a branch)
-                    self.request_msgs(initial=msg, msgs=still_unknown)
+                    self.request_msgs(initial=msg, msgs=list(still_unknown))
 
                     return
-
-        if parents_in_branch:
-            # Genearating the state of the conflicting branch
-            ...
-
-            self.tangle.get_balance()
-
-            return
-
-        # Checking if the payload is valid all parents are known about
-        if msg.is_payload_valid(self.tangle) is False:
-            self.tangle.state.add_invalid_msg(msg.hash)
-            return
 
         duplicate = self.tangle.find_msg_from_index(msg.node_id, msg.index)
 
@@ -303,13 +292,40 @@ class Node(Threaded):
             self.tangle.create_new_branch(msg, duplicate)
             return
 
+        if occurs:
+            # Updating the conflicting branches
+            for r in occurs:
+                main_state = r.manager.main_branch.state
+
+                # Genearating the state of the conflicting branch
+                new_state = self.tangle.state.merge(r.branch.state).merge(
+                    main_state, add=False
+                )
+
+                index = self.tangle.branches[r.manager.id].conflicts.index(r.branch)
+
+                # Checking if the payload is valid with the new state
+                if msg.is_payload_valid(new_state):
+                    r.branch.add_msg(msg, invalid_parents)
+                else:
+                    # Adding to invalid messages in the branch
+                    r.branch.state.add_invalid_msg(msg.hash)
+
+                # Updating the branch
+                self.tangle.branches[r.manager.id].conflicts[index] = r.branch
+
+            return
+
+        # Checking if the payload is valid
+        if msg.is_payload_valid(self.tangle) is False:
+            self.tangle.state.add_invalid_msg(msg.hash)
+            return
+
         index = self.tangle.get_transaction_index(msg.node_id)
 
         # Checking if the transaction index is correct
         if index != msg.index:
             return
-
-        # TODO: add the message to the correct branch
 
         # Adding the message to the tangle if it doesn't exist yet
         self.tangle.add_msg(msg, invalid_parents)

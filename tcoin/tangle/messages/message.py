@@ -107,12 +107,15 @@ class Message(SignedPayload):
         node_id: str,
         index: int,
         payload: dict,
-        parents: dict[str, bool] = [],
+        parents: dict[str, bool] = None,
         nonce: int = None,
         timestamp: int = None,
         hash: str = None,
         signature: str = None
     ):
+        if parents is None:
+            parents = []
+
         super().__init__(
             node_id=node_id,
             payload=payload,
@@ -131,7 +134,7 @@ class Message(SignedPayload):
         """Updates the tangle state with a message"""
         ...
 
-    def is_payload_valid(self, tangle: "Tangle") -> bool:
+    def is_payload_valid(self, state: "TangleState") -> bool:
         ...
 
     def select_parents(self, tangle: "Tangle"):

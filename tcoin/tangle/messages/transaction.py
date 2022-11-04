@@ -27,7 +27,7 @@ class Transaction(Message):
     def get_transaction(self):
         return TransactionPayload.from_dict(self.payload)
 
-    def is_payload_valid(self, tangle: "Tangle") -> bool:
+    def is_payload_valid(self, state: "TangleState") -> bool:
         # Transaction form is valid
         try:
             t = self.get_transaction()
@@ -45,7 +45,7 @@ class Transaction(Message):
         if t.amt < MIN_SEND_AMT:
             return False
 
-        balance = tangle.get_balance(self.node_id)
+        balance = state.get_balance(self.node_id)
 
         # Checking if the sender has/had enough to send the transaction
         if balance < t.amt:
