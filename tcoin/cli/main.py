@@ -4,7 +4,6 @@ import typer
 import yaml
 from InquirerPy import inquirer
 from InquirerPy.base.control import Choice
-from InquirerPy.separator import Separator
 from InquirerPy.utils import color_print
 from InquirerPy.validator import EmptyInputValidator
 from pyfiglet import figlet_format

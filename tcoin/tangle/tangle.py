@@ -63,9 +63,6 @@ class TangleState:
 
         return in_pool
 
-    def get_raw_balance(self, address: str) -> list:
-        return self.wallets.get(address, [])
-
     def get_balance(self, address: str):
         return self.wallets.get(address, 0)
 
