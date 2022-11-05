@@ -1,9 +1,12 @@
 import random
 import time
-from collections import Counter
 from functools import lru_cache
 
-from tcoin.config import invalid_msg_pool_purge_time, invalid_msg_pool_size
+from tcoin.config import (
+    invalid_msg_pool_purge_time,
+    invalid_msg_pool_size,
+    secure_storage,
+)
 from tcoin.constants import (
     BASE_DIFFICULTY,
     GAMMA,
@@ -462,7 +465,6 @@ class Tangle(Signed):
 
     @classmethod
     def from_dict(cls, data: dict, wallet: Wallet):
-        # TODO: save the branches
         tangle_data = data.get("msgs", None)
         strong_tips_data = data.get("strong_tips", None)
         weak_tips_data = data.get("weak_tips", None)
@@ -470,8 +472,14 @@ class Tangle(Signed):
 
         signature = data.get("signature", None)
 
-        if None in (tangle_data, strong_tips_data, weak_tips_data, signature):
+        if None in [tangle_data, strong_tips_data, weak_tips_data]:
             return cls()
+
+        if secure_storage:
+            if signature is None:
+                return cls()
+        else:
+            signature = None
 
         tangle = cls(signature=signature)
 
@@ -495,7 +503,8 @@ class Tangle(Signed):
 
         # Checking if the data was tampered
         if (
-            Wallet.is_signature_valid(
+            signature is not None
+            and Wallet.is_signature_valid(
                 address=wallet.address, signature=tangle.signature, msg=tangle.hash
             )
             is False
