@@ -7,13 +7,15 @@ PREFIX = "T"
 # Currency details
 MIN_SEND_AMT = 1  # minimum amount of coins that can be sent in a transaction
 
-
 # Messages
 MAX_TIP_AGE = 60 * 60 * 24  # maximum age before an unverified tip is purged
 MAX_PARENTS = 8  # maximum amount of parents a message can have
 MIN_STRONG_PARENTS = 1  # minimum amount of strong parents a message must have
 MAX_MSG_SIZE = 4096  # maximum size of a message in bytes
 MAX_PARENT_AGE = 60 * 60  # maximum age a parent can be older than a child message
+
+# Branches
+FINALITY_THRESHOLD = 0.5  # percent higher that a branch must be than the next highest branch to be considered final
 
 # Scheduler
 # TODO: make this dynamic

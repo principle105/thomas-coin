@@ -9,6 +9,7 @@ from tcoin.config import (
 )
 from tcoin.constants import (
     BASE_DIFFICULTY,
+    FINALITY_THRESHOLD,
     GAMMA,
     MAX_PARENTS,
     MAX_TIP_AGE,
@@ -118,12 +119,17 @@ class Branch:
         self.msgs = msgs
         self.state = state
 
+    @property
+    def approval_weight(self):
+        # TODO: add a reputation system
+        return len(self.msgs)
+
     def add_msgs(self, data: list[Message]):
         for d in data:
             self.add_msg(d)
 
     def add_msg(self, msg: Message, invalid_parents: list[str] = []):
-        # TODO: add support for tips
+        # TODO: add support for weak parents
         self.msgs[msg.hash] = msg
 
         msg.update_state(self.state)
@@ -156,8 +162,51 @@ class BranchManager:
         self.conflicts = conflicts
         self.main_branch = main_branch
 
-    def add_conflict(self, branch: Branch):
-        self.conflicts.append(branch)
+    def get_final_branch(self):
+        heaviest = max(self.conflicts, key=lambda c: c.approval_weight)
+
+        if heaviest.approval_weight >= self.main_branch.approval_weight * (
+            1 + FINALITY_THRESHOLD
+        ):
+            return heaviest
+
+        return None
+
+    def get_index_of_branch(self, branch: Branch):
+        if branch not in self.conflicts:
+            return None
+
+        return self.conflicts.index(branch)
+
+    def update_conflict(self, tangle: "Tangle", branch: Branch):
+        index = self.get_index_of_branch(branch)
+
+        if index is None:
+            self.conflicts.append(branch)
+        else:
+            self.conflicts[index] = branch
+
+        # Updating the main branch if a branch has a higher approval weight
+        heaviest = self.get_final_branch()
+
+        if heaviest is None:
+            return
+
+        index = self.get_index_of_branch(heaviest)
+
+        # Adding the main branch to conflicts
+        del self.conflicts[index or -1]
+        self.conflicts.append(self.main_branch)
+
+        # Removing the main branch messages from the tangle
+        for msg in self.main_branch.msgs.values():
+            tangle.remove_msg(msg)
+
+        # Updating the main branch
+        self.main_branch = branch
+
+        for msg in list(branch.msgs.values())[::-1]:
+            tangle.add_msg(msg)
 
     @property
     def id(self):
@@ -231,6 +280,24 @@ class Tangle(Signed):
     @property
     def get_balance(self):
         return self.state.get_balance
+
+    def remove_msg(self, msg: Message):
+        removed = True
+
+        if msg.hash in self.msgs:
+            del self.msgs[msg.hash]
+
+        elif msg.hash in self.strong_tips:
+            del self.strong_tips[msg.hash]
+
+        elif msg.hash in self.weak_tips:
+            del self.weak_tips[msg.hash]
+
+        else:
+            removed = False
+
+        if removed:
+            self.state.update_tx_on_tangle(msg, add=False)
 
     def purge_tips(self, tips):
         current_time = time.time()
@@ -394,16 +461,13 @@ class Tangle(Signed):
             # Finding which conflicts the message is part of
             occurs = self.find_occurs_in_branch(msg_ids, branch_id=branch_id)
 
-            if occurs:
-                return
-
             if occurs == []:
                 branch = Branch()
                 branch.add_msg(msg)
 
-                self.branches[branch_id].add_conflict(branch)
+                self.branches[branch_id].update_conflict(self, branch)
 
-                return
+            return
 
         # TODO: check if the conflicting branch is already finalized
 

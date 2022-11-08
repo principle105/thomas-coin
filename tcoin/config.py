@@ -1,6 +1,6 @@
 # Storage
 storage_path = "storage"
-secure_storage = True
+secure_storage = False
 
 # Node
 request_children_after = 60 * 60 * 24

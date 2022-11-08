@@ -302,8 +302,6 @@ class Node(Threaded):
                     main_state, add=False
                 )
 
-                index = self.tangle.branches[r.manager.id].conflicts.index(r.branch)
-
                 # Checking if the payload is valid with the new state
                 if msg.is_payload_valid(new_state):
                     r.branch.add_msg(msg, invalid_parents)
@@ -312,7 +310,9 @@ class Node(Threaded):
                     r.branch.state.add_invalid_msg(msg.hash)
 
                 # Updating the branch
-                self.tangle.branches[r.manager.id].conflicts[index] = r.branch
+                self.tangle.branches[r.manager.id].update_conflict(
+                    self.tangle, r.branch
+                )
 
             return
 

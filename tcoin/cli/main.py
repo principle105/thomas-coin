@@ -163,7 +163,7 @@ def connect(_, node: Node):
     node.connect_to_node(host, port)
 
 
-def view_branch(tangle: Tangle, node: Node):
+def view_branch(tangle: Tangle, _):
     node_id = inquirer.text(
         message="Node ID:",
         validate=EmptyInputValidator(),
