@@ -15,7 +15,8 @@ MAX_MSG_SIZE = 4096  # maximum size of a message in bytes
 MAX_PARENT_AGE = 60 * 60  # maximum age a parent can be older than a child message
 
 # Branches
-FINALITY_THRESHOLD = 0.5  # percent higher that a branch must be than the next highest branch to be considered final
+MAIN_THRESHOLD = 0.5  # percent higher that a branch must be than the next highest branch to be considered the main branch
+FINALITY_SCORE = 4  # approval weight of a branch for it to be considered final
 
 # Scheduler
 # TODO: make this dynamic

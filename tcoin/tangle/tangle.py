@@ -9,8 +9,9 @@ from tcoin.config import (
 )
 from tcoin.constants import (
     BASE_DIFFICULTY,
-    FINALITY_THRESHOLD,
+    FINALITY_SCORE,
     GAMMA,
+    MAIN_THRESHOLD,
     MAX_PARENTS,
     MAX_TIP_AGE,
     TIME_WINDOW,
@@ -104,25 +105,98 @@ class TangleState:
         return TangleState(wallets, invalid_msg_pool)
 
 
+class BranchReference:
+    def __init__(self, branch: "Branch", manager: "BranchManager"):
+        self.branch = branch
+        self.manager = manager
+
+
 class Branch:
     def __init__(
         self,
+        founder: Message,
         msgs: dict[str, Message] = None,
+        branches: dict[tuple[str, int], "BranchManager"] = None,
         state: "TangleState" = None,
     ):
         if msgs is None:
             msgs = {}
 
+        if branches is None:
+            branches = {}
+
         if state is None:
             state = TangleState()
 
+        self.founder = founder
         self.msgs = msgs
+        self.branches = branches
         self.state = state
+
+        self.add_msg(founder)
+
+    @property
+    def id(self):
+        return self.founder.hash
 
     @property
     def approval_weight(self):
         # TODO: add a reputation system
-        return len(self.msgs)
+        return sum(m.approval_weight if isinstance(m, Branch) else 1 for m in self.msgs)
+
+    def find_children(self, msg: Message) -> dict[str, Message] | None:
+        def _search(msg_ids: list[str]):
+            results = {}
+            for _id, m in self.msgs.items():
+                if _id in msg_ids:
+                    results[_id] = m
+
+            if results:
+                return _search(results)
+
+            return {}
+
+        return _search([msg.hash])
+
+    def add_branch(self, branch: "BranchManager"):
+        if self.id is None:
+            self.id = branch.id
+
+        self.branches[branch.id] = branch
+
+    def find_new_duplicate(self, msg: Message):
+        for _id, m in self.msgs.items():
+            if _id == msg.id:
+                return m
+
+        return None
+
+    def find_existing_duplicate(self, msg: Message):
+        for _id in self.branches:
+            if _id == msg.id:
+                return _id
+
+        return None
+
+    def get_conflict_msgs(self, msg_hashes: set[str]) -> set[str]:
+        # TODO: cache this
+        shared_msgs = msg_hashes & set(self.msgs)
+
+        for m in self.branches.values():
+            for b in m.conflicts.values():
+                shared_msgs |= b.get_conflict_msgs(msg_hashes)
+
+        return shared_msgs
+
+    @property
+    def is_final(self):
+        return self.approval_weight >= FINALITY_SCORE
+
+    def remove_msg(self, msg: Message):
+        if msg.hash in self.msgs:
+            del self.msgs[msg.hash]
+
+            msg.update_state(self.state, add=False)
 
     def add_msgs(self, data: list[Message]):
         for d in data:
@@ -135,11 +209,17 @@ class Branch:
         msg.update_state(self.state)
 
     def to_dict(self):
-        return {"msgs": [m.to_dict() for m in self.msgs.values()]}
+        return {
+            "founder": self.founder.to_dict(),
+            "msgs": [m.to_dict() for m in self.msgs.values()],
+            "branches": [b.to_dict() for b in self.branches.values()],
+        }
 
     @classmethod
     def from_dict(cls, data: dict):
-        branch = cls()
+        founder_msg = Message.from_dict(data["founder"])
+
+        branch = cls(founder_msg)
 
         for msg in data["msgs"]:
             msg = message_lookup(msg)
@@ -149,54 +229,81 @@ class Branch:
 
             branch.add_msg(msg)
 
+        for b in data["branches"]:
+            m = BranchManager.from_dict(b)
+
+            branch.add_branch(m)
+
         return branch
 
 
 class BranchManager:
     def __init__(
-        self, node_id: str, index: int, conflicts: list[Branch], main_branch: Branch
+        self,
+        node_id: str,
+        index: int,
+        main_branch: Branch,
+        conflicts: dict[str, Branch] = None,
+        depth: int = None,
     ):
+        if conflicts is None:
+            conflicts = {}
+
+        if depth is None:
+            depth = 0
+
         self.node_id = node_id
         self.index = index
 
         self.conflicts = conflicts
         self.main_branch = main_branch
 
-    def get_final_branch(self):
-        heaviest = max(self.conflicts, key=lambda c: c.approval_weight)
+        self.depth = depth
+
+    def add_conflict(self, branch: Branch):
+        self.conflicts[branch.id] = branch
+
+    def remove_conflict(self, branch: Branch):
+        if branch.id in self.conflicts:
+            del self.conflicts[branch.id]
+
+    def get_heaviest_branch(self):
+        heaviest = max(self.conflicts.values(), key=lambda c: c.approval_weight)
+
+        if self.main_branch.is_final:
+            return None
+
+        if heaviest.is_final:
+            return heaviest
 
         if heaviest.approval_weight >= self.main_branch.approval_weight * (
-            1 + FINALITY_THRESHOLD
+            1 + MAIN_THRESHOLD
         ):
             return heaviest
 
         return None
 
-    def get_index_of_branch(self, branch: Branch):
-        if branch not in self.conflicts:
-            return None
-
-        return self.conflicts.index(branch)
-
     def update_conflict(self, tangle: "Tangle", branch: Branch):
-        index = self.get_index_of_branch(branch)
+        all_branch_msgs = set(branch.msgs)
 
-        if index is None:
-            self.conflicts.append(branch)
-        else:
-            self.conflicts[index] = branch
+        # Checking if the parents of each message are known
+        for msg in branch.msgs.values():
+            valid_parents = {_id for _id, t in msg.parents.items() if t == 0}
 
-        # Updating the main branch if a branch has a higher approval weight
-        heaviest = self.get_final_branch()
+            if valid_parents - all_branch_msgs:
+                return
+
+        self.conflicts[branch.id] = branch
+
+        # Findind the heaviest branch
+        heaviest = self.get_heaviest_branch()
 
         if heaviest is None:
             return
 
-        index = self.get_index_of_branch(heaviest)
-
-        # Adding the main branch to conflicts
-        del self.conflicts[index or -1]
-        self.conflicts.append(self.main_branch)
+        # Swapping the main branch with the heaviest branch
+        self.remove_conflict(heaviest)
+        self.add_conflict(self.main_branch)
 
         # Removing the main branch messages from the tangle
         for msg in self.main_branch.msgs.values():
@@ -205,8 +312,13 @@ class BranchManager:
         # Updating the main branch
         self.main_branch = branch
 
+        # Adding in reverse order so that each message has an existing parent
         for msg in list(branch.msgs.values())[::-1]:
             tangle.add_msg(msg)
+
+        # Checking if the new main branches is final
+        if self.main_branch.is_final:
+            tangle.remove_branch(self.id)
 
     @property
     def id(self):
@@ -216,8 +328,9 @@ class BranchManager:
         return {
             "node_id": self.node_id,
             "index": self.index,
-            "conflicts": [c.to_dict() for c in self.conflicts],
+            "conflicts": [c.to_dict() for c in self.conflicts.values()],
             "main_branch": self.main_branch.to_dict(),
+            "depth": self.depth,
         }
 
     @classmethod
@@ -227,13 +340,8 @@ class BranchManager:
             index=data["index"],
             conflicts=[Branch.from_dict(c) for c in data["conflicts"]],
             main_branch=Branch.from_dict(data["main_branch"]),
+            depth=data["depth"],
         )
-
-
-class BranchReference:
-    def __init__(self, branch: Branch, manager: BranchManager):
-        self.branch = branch
-        self.manager = manager
 
 
 class Tangle(Signed):
@@ -413,27 +521,22 @@ class Tangle(Signed):
 
         return {_id: m for _id, m in self.msgs.items() if msg_id in m.parents}
 
-    def find_msg_from_index(self, address: str, index: int) -> Message | None:
-        return next(
-            (
-                m
-                for m in self.all_msgs.values()
-                if m.address == address and m.index == index
-            ),
-            None,
-        )
+    def find_msg_from_index(self, msg_id: tuple[str, int]) -> Message | None:
+        return next((m for m in self.all_msgs.values() if m.id == msg_id), None)
 
     def get_transaction_index(self, address: str) -> int:
         return sum(1 for m in self.all_msgs.values() if m.address == address)
 
     def find_occurs_in_branch(
-        self, msg_ids: set[str], branch_id: tuple[str, int] = None
+        self, msg_hashes: set[str], branch_id: tuple[str, int] = None
     ) -> list[BranchReference]:
+        """Finding all the branches that contain a set of messages"""
+
         if branch_id is None:
             occurs = []
 
             for _id in self.branches:
-                occurs += self.find_occurs_in_branch(msg_ids, _id)
+                occurs += self.find_occurs_in_branch(msg_hashes, branch_id=_id)
 
             return occurs
 
@@ -444,49 +547,114 @@ class Tangle(Signed):
 
         occurs = [
             BranchReference(b, manager)
-            for b in manager.conflicts
-            if msg_ids & set(b.msgs)
+            for b in manager.conflicts.values()
+            if b.get_conflict_msgs(msg_hashes)
         ]
 
         return occurs
 
-    def create_new_branch(self, msg: Message, conflict: Message):
-        branch_id = (msg.node_id, msg.index)
+    def is_message_finalized(self, msg: Message):
+        # TODO: cache this function
+        # TODO: implement this function
 
+        return False
+
+    def remove_branch(self, branch_id: tuple[str, int]):
         if branch_id in self.branches:
+            del self.branches[branch_id]
+
+    def find_duplicates_from_branches(
+        self, msg: Message, parent_branches: list[BranchReference]
+    ) -> bool:
+        if not parent_branches:
+            # Creating a new base branch
+            duplicate = self.find_msg_from_index(msg.id)
+
+            if duplicate:
+                # Creating a new branch
+                self.create_new_branch(msg, duplicate)
+
+                return True
+
+            return False
+
+        # Finding the eepest parent branch manager
+        deep_ref = max(parent_branches, key=lambda b: b.manager.depth)
+
+        duplicate = deep_ref.branch.find_existing_duplicate(msg)
+
+        if duplicate:
+            # Adding the to the branch
+            branch = Branch(msg)
+            deep_ref.branch.branches[msg.id].add_conflict(branch)
+
+        else:
+            duplicate = deep_ref.branch.find_new_duplicate(msg)
+
+            if duplicate:
+                # TODO: group the messages that are part of each branch
+                children = deep_ref.branch.find_children(duplicate)
+
+                # Removing the branches from the branch
+                for p in children.values():
+                    deep_ref.branch.remove_msg(p)
+
+                # Creating a branch from the duplicate
+                c_branch = Branch(duplicate)
+                c_branch.add_msgs(list(children.values()))
+
+                # Creating the new branch
+                branch = Branch(msg)
+
+                manager = BranchManager(
+                    node_id=msg.node_id,
+                    index=msg.index,
+                    main_branch=c_branch,
+                    depth=deep_ref.manager.depth + 1,
+                )
+                manager.add_conflict(branch)
+
+                deep_ref.branch.add_branch(manager)
+
+        # Updating the branch in the manager
+        deep_ref.manager.update_conflict(self.tangle, branch)
+
+        # Updating the branch manager in the tangle
+        self.update_branch_manager(deep_ref.manager)
+
+        return True
+
+    def update_branch_manager(self, manager: BranchManager):
+        ...
+
+    def create_new_branch(self, msg: Message, conflict: Message):
+        if msg.id in self.branches:
             msg_ids = {
                 msg.hash,
             }
 
             # Finding which conflicts the message is part of
-            occurs = self.find_occurs_in_branch(msg_ids, branch_id=branch_id)
+            occurs = self.find_occurs_in_branch(msg_ids, branch_id=msg.id)
 
             if occurs == []:
-                branch = Branch()
-                branch.add_msg(msg)
+                branch = Branch(msg)
 
-                self.branches[branch_id].update_conflict(self, branch)
+                self.branches[msg.id].update_conflict(self, branch)
 
             return
 
-        # TODO: check if the conflicting branch is already finalized
-
         children = self.find_children(conflict.node_id)
 
-        # Recursively finding the conflicting branch
-        conflict_branch = [conflict] + list(children.values())
+        branch, c_branch = Branch(msg), Branch(conflict)
 
-        branch, c_branch = Branch(), Branch()
+        c_branch.add_msgs(list(children.values()))
 
-        branch.add_msg(msg)
-        c_branch.add_msgs(conflict_branch)
-
-        self.branches[branch_id] = BranchManager(
-            node_id=msg.node_id,
-            index=msg.index,
-            conflicts=[branch],
-            main_branch=c_branch,
+        manager = BranchManager(
+            node_id=msg.node_id, index=msg.index, main_branch=c_branch
         )
+        manager.add_conflict(branch)
+
+        self.branches[msg.id] = manager
 
     @lru_cache(maxsize=64)
     def get_difficulty(self, msg: Message):

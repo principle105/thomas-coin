@@ -265,6 +265,8 @@ class Node(Threaded):
 
                     return
 
+                # TODO: potentially check if the message is finalized
+
                 # Checking if the unknown messages are part of a branch
                 occurs = self.tangle.find_occurs_in_branch(set(unknown_parents))
 
@@ -284,37 +286,36 @@ class Node(Threaded):
 
                     return
 
-        duplicate = self.tangle.find_msg_from_index(msg.node_id, msg.index)
+        # Checking if any conflicts with the parents were already resolved
+        if self.tangle.is_message_finalized(msg) is False:
+            # TODO: make sure all the parent branches do not conflict
 
-        # Checking if it has a duplicate transaction index
-        if duplicate is not None:
-            # Creating a new branch
-            self.tangle.create_new_branch(msg, duplicate)
-            return
+            found_duplicate = self.tangle.find_duplicates_from_branches(msg, occurs)
 
-        if occurs:
-            # Updating the conflicting branches
-            for r in occurs:
-                main_state = r.manager.main_branch.state
+            if found_duplicate:
+                return
 
-                # Genearating the state of the conflicting branch
-                new_state = self.tangle.state.merge(r.branch.state).merge(
-                    main_state, add=False
-                )
+            if occurs:
+                # Updating the conflicting branches
+                for r in occurs:
+                    main_state = r.manager.main_branch.state
 
-                # Checking if the payload is valid with the new state
-                if msg.is_payload_valid(new_state):
-                    r.branch.add_msg(msg, invalid_parents)
-                else:
-                    # Adding to invalid messages in the branch
-                    r.branch.state.add_invalid_msg(msg.hash)
+                    # Genearating the state of the conflicting branch
+                    new_state = ...
 
-                # Updating the branch
-                self.tangle.branches[r.manager.id].update_conflict(
-                    self.tangle, r.branch
-                )
+                    # Checking if the payload is valid with the new state
+                    if msg.is_payload_valid(new_state):
+                        r.branch.add_msg(msg, invalid_parents)
+                    else:
+                        # Adding to invalid messages in the branch
+                        r.branch.state.add_invalid_msg(msg.hash)
 
-            return
+                    # Updating the branch
+                    self.tangle.branches[r.manager.id].update_conflict(
+                        self.tangle, r.branch
+                    )
+
+                return
 
         # Checking if the payload is valid
         if msg.is_payload_valid(self.tangle) is False:

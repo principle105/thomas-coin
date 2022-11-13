@@ -2,6 +2,7 @@ import time
 from typing import TYPE_CHECKING
 
 from objsize import get_deep_size
+
 from tcoin.constants import (
     MAX_MSG_SIZE,
     MAX_PARENT_AGE,
@@ -129,6 +130,10 @@ class Message(SignedPayload):
         self.index = index
 
         self.nonce = nonce
+
+    @property
+    def id(self):
+        return (self.node_id, self.index)
 
     def update_state(self, state: "TangleState"):
         """Updates the tangle state with a message"""

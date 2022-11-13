@@ -7,13 +7,14 @@ from InquirerPy.base.control import Choice
 from InquirerPy.utils import color_print
 from InquirerPy.validator import EmptyInputValidator
 from pyfiglet import figlet_format
+from yaspin import yaspin
+from yaspin.spinners import Spinners
+
 from tcoin.constants import MIN_SEND_AMT
 from tcoin.p2p.nodes import Node
 from tcoin.tangle import Tangle
 from tcoin.tangle.messages import Transaction, TransactionPayload
 from tcoin.wallet import Wallet
-from yaspin import yaspin
-from yaspin.spinners import Spinners
 
 # Initializing cli
 app = typer.Typer()
@@ -182,7 +183,7 @@ def view_branch(tangle: Tangle, _):
 
     Send.primary(f"\n\nBranch ID: {branch_id}")
 
-    for i, b in enumerate(branch.conflicts):
+    for i, b in enumerate(branch.conflicts.values()):
         Send.secondary(f"Branch: {i} - {len(b.msgs)}")
 
         state = tangle.state.merge(b.state).merge(branch.main_branch.state, add=False)
