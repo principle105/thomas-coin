@@ -24,6 +24,9 @@ rich = "^12.6.0"
 [tool.poetry.scripts]
 tcoin = "tcoin.cli.main:app"
 
+[tool.black]
+line_length=79
+
 [tool.poetry.group.dev.dependencies]
 black = "^22.10.0"
 isort = "^5.10.1"

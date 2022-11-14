@@ -16,7 +16,13 @@ EOT_CHAR = 0x04.to_bytes(1, "big")
 
 class NodeConnection(Threaded):
     def __init__(
-        self, *, main_node: "Node", sock: socket.socket, id: str, host: str, port: int
+        self,
+        *,
+        main_node: "Node",
+        sock: socket.socket,
+        id: str,
+        host: str,
+        port: int
     ):
         super().__init__()
 
@@ -86,7 +92,9 @@ class NodeConnection(Threaded):
                     packet = buffer[:eot_pos]
                     buffer = buffer[eot_pos + 1 :]
 
-                    self.main_node.message_from_node(self, self.parse_packet(packet))
+                    self.main_node.message_from_node(
+                        self, self.parse_packet(packet)
+                    )
 
                     eot_pos = buffer.find(EOT_CHAR)
 

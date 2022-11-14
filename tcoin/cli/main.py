@@ -84,7 +84,9 @@ def send(tangle: Tangle, node: Node):
     balance = tangle.get_balance(node.wallet.address)
 
     if balance < MIN_SEND_AMT:
-        return Send.fail(f"You have less than the minimum send amount {MIN_SEND_AMT}")
+        return Send.fail(
+            f"You have less than the minimum send amount {MIN_SEND_AMT}"
+        )
 
     address = inquirer.text(
         message="Address:", validate=EmptyInputValidator()
@@ -111,7 +113,9 @@ def send(tangle: Tangle, node: Node):
 
     index = int(index)
 
-    msg = node.create_message(Transaction, index=index, payload=payload.to_dict())
+    msg = node.create_message(
+        Transaction, index=index, payload=payload.to_dict()
+    )
 
     msg.select_parents(tangle)
 
@@ -170,7 +174,9 @@ def view_branch(tangle: Tangle, _):
         validate=EmptyInputValidator(),
     ).execute()
 
-    index = inquirer.number(message="Index:", validate=EmptyInputValidator()).execute()
+    index = inquirer.number(
+        message="Index:", validate=EmptyInputValidator()
+    ).execute()
 
     index = int(index)
 
@@ -186,7 +192,9 @@ def view_branch(tangle: Tangle, _):
     for i, b in enumerate(branch.conflicts.values()):
         Send.secondary(f"Branch: {i} - {len(b.msgs)}")
 
-        state = tangle.state.merge(b.state).merge(branch.main_branch.state, add=False)
+        state = tangle.state.merge(b.state).merge(
+            branch.main_branch.state, add=False
+        )
 
         balance = state.get_balance(branch_id[0])
 
@@ -311,7 +319,8 @@ def start():
 
             if result == 0:
                 is_done = inquirer.confirm(
-                    message="Are you sure you want to stop this node?", default=False
+                    message="Are you sure you want to stop this node?",
+                    default=False,
                 ).execute()
                 break
 
@@ -365,7 +374,9 @@ def info():
         + '"The final currency"\n\nThomas coin is a lightweight DAG-based cryptocurrency designed for everyday applications.'
     )
 
-    Send.secondary("\nGithub Repository: https://github.com/principle105/thomas-coin")
+    Send.secondary(
+        "\nGithub Repository: https://github.com/principle105/thomas-coin"
+    )
 
 
 if __name__ == "__main__":

@@ -29,7 +29,9 @@ class TangleState:
     """Keeps track of the tangle's current state"""
 
     def __init__(
-        self, wallets: dict[str, int] = None, invalid_msg_pool: dict[str, int] = None
+        self,
+        wallets: dict[str, int] = None,
+        invalid_msg_pool: dict[str, int] = None,
     ):
         if wallets is None:
             wallets = {}
@@ -39,7 +41,9 @@ class TangleState:
 
         self.wallets = wallets  # address: balance
 
-        self.invalid_msg_pool = invalid_msg_pool  # hash: timestamp of last access
+        self.invalid_msg_pool = (
+            invalid_msg_pool  # hash: timestamp of last access
+        )
 
     def add_invalid_msg(self, msg_hash: str):
         self.invalid_msg_pool[msg_hash] = int(time.time())
@@ -60,7 +64,9 @@ class TangleState:
 
         # Purging the oldest invalid messages
         self.invalid_msg_pool = dict(
-            sorted(self.invalid_msg_pool, key=lambda m: m[1])[invalid_msg_pool_size:]
+            sorted(self.invalid_msg_pool, key=lambda m: m[1])[
+                invalid_msg_pool_size:
+            ]
         )
 
         return in_pool
@@ -142,7 +148,10 @@ class Branch:
     @property
     def approval_weight(self):
         # TODO: add a reputation system
-        return sum(m.approval_weight if isinstance(m, Branch) else 1 for m in self.msgs)
+        return sum(
+            m.approval_weight if isinstance(m, Branch) else 1
+            for m in self.msgs
+        )
 
     def find_children(self, msg: Message) -> dict[str, Message] | None:
         def _search(msg_ids: list[str]):
@@ -244,13 +253,13 @@ class BranchManager:
         index: int,
         main_branch: Branch,
         conflicts: dict[str, Branch] = None,
-        depth: int = None,
+        nesting: list[list[str]] = None,
     ):
         if conflicts is None:
             conflicts = {}
 
-        if depth is None:
-            depth = 0
+        if nesting is None:
+            nesting = []
 
         self.node_id = node_id
         self.index = index
@@ -258,7 +267,7 @@ class BranchManager:
         self.conflicts = conflicts
         self.main_branch = main_branch
 
-        self.depth = depth
+        self.nesting = nesting
 
     def add_conflict(self, branch: Branch):
         self.conflicts[branch.id] = branch
@@ -268,7 +277,9 @@ class BranchManager:
             del self.conflicts[branch.id]
 
     def get_heaviest_branch(self):
-        heaviest = max(self.conflicts.values(), key=lambda c: c.approval_weight)
+        heaviest = max(
+            self.conflicts.values(), key=lambda c: c.approval_weight
+        )
 
         if self.main_branch.is_final:
             return None
@@ -330,7 +341,7 @@ class BranchManager:
             "index": self.index,
             "conflicts": [c.to_dict() for c in self.conflicts.values()],
             "main_branch": self.main_branch.to_dict(),
-            "depth": self.depth,
+            "nesting": self.nesting,
         }
 
     @classmethod
@@ -340,7 +351,7 @@ class BranchManager:
             index=data["index"],
             conflicts=[Branch.from_dict(c) for c in data["conflicts"]],
             main_branch=Branch.from_dict(data["main_branch"]),
-            depth=data["depth"],
+            nesting=data["nesting"],
         )
 
 
@@ -456,7 +467,9 @@ class Tangle(Signed):
     ) -> dict[str, Message]:
         # Recursively finding all the children
 
-        children = {_id: m for _id, m in self.all_msgs.items() if msg_id in m.parents}
+        children = {
+            _id: m for _id, m in self.all_msgs.items() if msg_id in m.parents
+        }
 
         total.update(children)
 
@@ -522,7 +535,9 @@ class Tangle(Signed):
         return {_id: m for _id, m in self.msgs.items() if msg_id in m.parents}
 
     def find_msg_from_index(self, msg_id: tuple[str, int]) -> Message | None:
-        return next((m for m in self.all_msgs.values() if m.id == msg_id), None)
+        return next(
+            (m for m in self.all_msgs.values() if m.id == msg_id), None
+        )
 
     def get_transaction_index(self, address: str) -> int:
         return sum(1 for m in self.all_msgs.values() if m.address == address)
@@ -578,8 +593,8 @@ class Tangle(Signed):
 
             return False
 
-        # Finding the eepest parent branch manager
-        deep_ref = max(parent_branches, key=lambda b: b.manager.depth)
+        # Finding the deepest parent branch manager
+        deep_ref = max(parent_branches, key=lambda b: len(b.manager.nesting))
 
         duplicate = deep_ref.branch.find_existing_duplicate(msg)
 
@@ -591,41 +606,89 @@ class Tangle(Signed):
         else:
             duplicate = deep_ref.branch.find_new_duplicate(msg)
 
-            if duplicate:
-                # TODO: group the messages that are part of each branch
-                children = deep_ref.branch.find_children(duplicate)
+            if duplicate is None:
+                return False
 
-                # Removing the branches from the branch
-                for p in children.values():
-                    deep_ref.branch.remove_msg(p)
+            # TODO: group the messages that are part of each branch
+            children = deep_ref.branch.find_children(duplicate)
 
-                # Creating a branch from the duplicate
-                c_branch = Branch(duplicate)
-                c_branch.add_msgs(list(children.values()))
+            # Removing the branches from the branch
+            for p in children.values():
+                deep_ref.branch.remove_msg(p)
 
-                # Creating the new branch
-                branch = Branch(msg)
+            # Creating a branch from the duplicate
+            c_branch = Branch(duplicate)
+            c_branch.add_msgs(list(children.values()))
 
-                manager = BranchManager(
-                    node_id=msg.node_id,
-                    index=msg.index,
-                    main_branch=c_branch,
-                    depth=deep_ref.manager.depth + 1,
-                )
-                manager.add_conflict(branch)
+            # Creating the new branch
+            branch = Branch(msg)
 
-                deep_ref.branch.add_branch(manager)
+            new_nesting_layer = [deep_ref.manager.id, deep_ref.branch.id]
 
-        # Updating the branch in the manager
-        deep_ref.manager.update_conflict(self.tangle, branch)
+            manager = BranchManager(
+                node_id=msg.node_id,
+                index=msg.index,
+                main_branch=c_branch,
+                nesting=deep_ref.manager.nesting + [new_nesting_layer],
+            )
+            manager.add_conflict(branch)
+
+            deep_ref.branch.add_branch(manager)
 
         # Updating the branch manager in the tangle
         self.update_branch_manager(deep_ref.manager)
 
+        # Updating the branch in the manager
+        deep_ref.manager.update_conflict(self, deep_ref.branch)
+
         return True
 
     def update_branch_manager(self, manager: BranchManager):
-        ...
+        def update(
+            bm: dict[tuple[str, int], BranchManager], nest: list[list[str]]
+        ):
+            if len(nest):
+                m, b = nest[0]
+
+                bm[m].conflicts[b].branches = update(
+                    bm[m].conflicts[b].branches, nest[1:], manager
+                )
+            else:
+                bm[manager.id] = manager
+
+            return bm
+
+        self.branches = update(self.branches, manager.nesting)
+
+    def get_state(self, ref: BranchReference):
+        def get_branch_state(
+            nest: list[list[str]],
+            main: bool = False,
+            state: TangleState = None,
+        ):
+            m, b = (
+                nest[0] if len(nest) else ref.manager.id,
+                ref.branch.id,
+            )
+
+            branch = self.branches[m].conflicts[b]
+
+            new_branch = self.branches[m].main_branch if main else branch
+
+            if state is None:
+                state = new_branch.state
+            else:
+                state = state.merge(new_branch.state)
+
+            if len(nest):
+                return get_branch_state(branch.branches, nest[1:], state)
+
+            return state
+
+        branch_state = get_branch_state(ref.manager.nesting)
+        main_state = get_branch_state(ref.manager.nesting, main=True)
+
+        return self.state.merge(branch_state).merge(main_state, add=False)
 
     def create_new_branch(self, msg: Message, conflict: Message):
         if msg.id in self.branches:
@@ -643,7 +706,7 @@ class Tangle(Signed):
 
             return
 
-        children = self.find_children(conflict.node_id)
+        children = self.find_children(conflict.hash)
 
         branch, c_branch = Branch(msg), Branch(conflict)
 
@@ -713,7 +776,9 @@ class Tangle(Signed):
         tangle = cls(signature=signature)
 
         # Adding the messages to the tangle
-        for m_data in list(reversed(tangle_data)) + strong_tips_data + weak_tips_data:
+        for m_data in (
+            list(reversed(tangle_data)) + strong_tips_data + weak_tips_data
+        ):
             msg = message_lookup(m_data)
 
             if msg is None:
@@ -726,7 +791,9 @@ class Tangle(Signed):
             tangle.add_msg(msg)
 
         # Adding the branches
-        tangle.branches = {(m := BranchManager.from_dict(b)).id: m for b in branch_data}
+        tangle.branches = {
+            (m := BranchManager.from_dict(b)).id: m for b in branch_data
+        }
 
         tangle.add_hash()
 
@@ -734,7 +801,9 @@ class Tangle(Signed):
         if (
             signature is not None
             and Wallet.is_signature_valid(
-                address=wallet.address, signature=tangle.signature, msg=tangle.hash
+                address=wallet.address,
+                signature=tangle.signature,
+                msg=tangle.hash,
             )
             is False
         ):

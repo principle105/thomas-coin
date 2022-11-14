@@ -40,7 +40,9 @@ class Scheduler(Threaded):
         now = time.time()
 
         # Disregarding messages with timestamps in the future
-        valid_msgs = sum(1 for m in self.queue[node_id].values() if m.timestamp <= now)
+        valid_msgs = sum(
+            1 for m in self.queue[node_id].values() if m.timestamp <= now
+        )
 
         if valid_msgs == 0:
             del self.scores[node_id]

@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 from objsize import get_deep_size
+
 from tcoin.constants import MAX_REQUEST_SIZE
 from tcoin.tangle.messages import SignedPayload
 from tcoin.utils import get_raw_hash
@@ -18,7 +19,7 @@ class Request(SignedPayload):
         timestamp: int = None,
         hash: str = None,
         signature: str = None,
-        response: dict = None,
+        response: dict = None
     ):
 
         super().__init__(

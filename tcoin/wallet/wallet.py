@@ -12,7 +12,9 @@ class Wallet:
         if secret is None:
             self.sk = ecdsa.SigningKey.generate(curve=CURVE)
         else:
-            self.sk = ecdsa.SigningKey.from_string(bytes.fromhex(secret), curve=CURVE)
+            self.sk = ecdsa.SigningKey.from_string(
+                bytes.fromhex(secret), curve=CURVE
+            )
 
         # Verifying key
         self.vk: ecdsa.VerifyingKey = self.sk.get_verifying_key()
@@ -24,13 +26,18 @@ class Wallet:
 
     @property
     def address(self):
-        return PREFIX + b58encode(self.vk.to_string(encoding="compressed")).decode()
+        return (
+            PREFIX
+            + b58encode(self.vk.to_string(encoding="compressed")).decode()
+        )
 
     def sign(self, msg: str):
         return b64encode(self.sk.sign(msg.encode())).decode()
 
     @classmethod
-    def is_signature_valid(cls, address: str, signature: str, msg: str) -> bool:
+    def is_signature_valid(
+        cls, address: str, signature: str, msg: str
+    ) -> bool:
         vk = cls.get_vk_from_address(address)
 
         try:
@@ -42,4 +49,6 @@ class Wallet:
 
     @classmethod
     def get_vk_from_address(cls, address: str):
-        return VerifyingKey.from_string(b58decode(address[len(PREFIX) :]), curve=CURVE)
+        return VerifyingKey.from_string(
+            b58decode(address[len(PREFIX) :]), curve=CURVE
+        )

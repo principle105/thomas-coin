@@ -9,7 +9,13 @@ from tcoin.constants import (
     MAX_PARENTS,
     MIN_STRONG_PARENTS,
 )
-from tcoin.utils import check_var_types, get_pow_hash, get_target, is_valid_hash, pow
+from tcoin.utils import (
+    check_var_types,
+    get_pow_hash,
+    get_target,
+    is_valid_hash,
+    pow,
+)
 
 from ..signed import Signed
 
@@ -223,8 +229,12 @@ class Message(SignedPayload):
         if is_valid_hash(self.hash, target) is False:
             return False
 
-        invalid_parents = set()  # parents that are known to be invalid is a parent
-        unknown_parents = set()  # parents that are not known to be valid or invalid
+        invalid_parents = (
+            set()
+        )  # parents that are known to be invalid is a parent
+        unknown_parents = (
+            set()
+        )  # parents that are not known to be valid or invalid
 
         # TODO: check if the graph is still acyclic
 
@@ -294,7 +304,11 @@ class Message(SignedPayload):
 
     @property
     def meta_data(self) -> dict:
-        return {**super().meta_data, "parents": self.parents, "index": self.index}
+        return {
+            **super().meta_data,
+            "parents": self.parents,
+            "index": self.index,
+        }
 
     def to_dict(self) -> dict:
         return {**super().to_dict(), "nonce": self.nonce}

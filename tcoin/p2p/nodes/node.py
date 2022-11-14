@@ -108,14 +108,19 @@ class Node(Threaded):
             _id: [n.host, n.port] for _id, n in self.nodes_outbound.items()
         }
 
-        save_storage_file(KNOWN_PEERS_FILE_NAME, {**outbound_data, **self.other_nodes})
+        save_storage_file(
+            KNOWN_PEERS_FILE_NAME, {**outbound_data, **self.other_nodes}
+        )
 
     def connect_to_node(self, host: str, port: int):
         if host == self.host and port == self.port:
             logging.info("You cannot connect with yourself")
             return False
 
-        if any(n.host == host and n.port == port for n in self.nodes_outbound.values()):
+        if any(
+            n.host == host and n.port == port
+            for n in self.nodes_outbound.values()
+        ):
             logging.info("You are already connected with that node")
 
         try:
@@ -144,8 +149,12 @@ class Node(Threaded):
 
             self.send_to_node(thread_client, request.to_dict())
 
-    def create_new_connection(self, sock: socket.socket, id: str, host: str, port: int):
-        return NodeConnection(main_node=self, sock=sock, id=id, host=host, port=port)
+    def create_new_connection(
+        self, sock: socket.socket, id: str, host: str, port: int
+    ):
+        return NodeConnection(
+            main_node=self, sock=sock, id=id, host=host, port=port
+        )
 
     def node_disconnected(self, node: NodeConnection):
         if node.id in self.nodes_inbound:
@@ -162,7 +171,9 @@ class Node(Threaded):
         # Handling if the data is a message
         self.handle_new_message(data, node=node)
 
-    def request_msgs(self, msgs: list[str], initial: Message = None, history=False):
+    def request_msgs(
+        self, msgs: list[str], initial: Message = None, history=False
+    ):
         request = self.create_request(
             GetMsgs,
             initial=initial.to_dict(),
@@ -268,13 +279,19 @@ class Node(Threaded):
                 # TODO: potentially check if the message is finalized
 
                 # Checking if the unknown messages are part of a branch
-                occurs = self.tangle.find_occurs_in_branch(set(unknown_parents))
+                occurs = self.tangle.find_occurs_in_branch(
+                    set(unknown_parents)
+                )
 
                 unknown_parents = set(unknown_parents)
 
                 parents_in_branch = set(
                     sum(
-                        [list(set(r.branch.msgs) & unknown_parents) for r in occurs], []
+                        [
+                            list(set(r.branch.msgs) & unknown_parents)
+                            for r in occurs
+                        ],
+                        [],
                     )
                 )
 
@@ -290,7 +307,9 @@ class Node(Threaded):
         if self.tangle.is_message_finalized(msg) is False:
             # TODO: make sure all the parent branches do not conflict
 
-            found_duplicate = self.tangle.find_duplicates_from_branches(msg, occurs)
+            found_duplicate = self.tangle.find_duplicates_from_branches(
+                msg, occurs
+            )
 
             if found_duplicate:
                 return
@@ -298,10 +317,8 @@ class Node(Threaded):
             if occurs:
                 # Updating the conflicting branches
                 for r in occurs:
-                    main_state = r.manager.main_branch.state
-
                     # Genearating the state of the conflicting branch
-                    new_state = ...
+                    new_state = self.tangle.get_state(r)
 
                     # Checking if the payload is valid with the new state
                     if msg.is_payload_valid(new_state):
