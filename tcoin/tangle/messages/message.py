@@ -141,6 +141,11 @@ class Message(SignedPayload):
     def id(self):
         return (self.node_id, self.index)
 
+    @property
+    def approval_weight(self) -> int:
+        # TODO: add a reputation system
+        return 1
+
     def update_state(self, state: "TangleState"):
         """Updates the tangle state with a message"""
         ...

@@ -1,6 +1,7 @@
 import random
 import time
 from functools import lru_cache
+from typing import Callable
 
 from tcoin.config import (
     invalid_msg_pool_purge_time,
@@ -147,11 +148,7 @@ class Branch:
 
     @property
     def approval_weight(self):
-        # TODO: add a reputation system
-        return sum(
-            m.approval_weight if isinstance(m, Branch) else 1
-            for m in self.msgs
-        )
+        return sum(m.approval_weight for m in self.msgs.values())
 
     def find_children(self, msg: Message) -> dict[str, Message] | None:
         def _search(msg_ids: list[str]):
@@ -462,11 +459,10 @@ class Tangle(Signed):
         self,
         msg_id: str,
         *,
-        stop: int = None,
+        stop: Callable[[dict[str, Message]], bool] = None,
         total: dict[str, Message] = {},
     ) -> dict[str, Message]:
         # Recursively finding all the children
-
         children = {
             _id: m for _id, m in self.all_msgs.items() if msg_id in m.parents
         }
@@ -474,9 +470,7 @@ class Tangle(Signed):
         total.update(children)
 
         if stop is not None:
-            stop -= 1
-
-            if stop == 0:
+            if stop(total):
                 return total
 
         for c in children:
@@ -569,10 +563,31 @@ class Tangle(Signed):
         return occurs
 
     def is_message_finalized(self, msg: Message):
-        # TODO: cache this function
-        # TODO: implement this function
+        total_weight = 0
+
+        def add_approval_weight(t: dict[str, Message]):
+            nonlocal total_weight
+
+            weight = sum(m.approval_weight for m in t.values())
+            total_weight += weight
+
+            return total_weight >= FINALITY_SCORE
+
+        # Getting the total weight of the children
+        self.find_children(msg.hash, stop=add_approval_weight)
+
+        # Checking nif the weight makes the message final
+        if total_weight >= FINALITY_SCORE:
+            return True
 
         return False
+
+    def _is_message_finalized(self, msg: Message, total: int = None):
+        if total is None:
+            total = 0
+
+        for p in msg.parents:
+            total
 
     def remove_branch(self, branch_id: tuple[str, int]):
         if branch_id in self.branches:
@@ -799,7 +814,7 @@ class Tangle(Signed):
 
         # Checking if the data was tampered
         if (
-            signature is not None
+            secure_storage
             and Wallet.is_signature_valid(
                 address=wallet.address,
                 signature=tangle.signature,
