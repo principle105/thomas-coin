@@ -276,8 +276,6 @@ class Node(Threaded):
 
                     return
 
-                # TODO: potentially check if the message is finalized
-
                 # Checking if the unknown messages are part of a branch
                 occurs = self.tangle.find_occurs_in_branch(
                     set(unknown_parents)

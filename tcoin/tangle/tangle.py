@@ -41,7 +41,6 @@ class TangleState:
             invalid_msg_pool = {}
 
         self.wallets = wallets  # address: balance
-
         self.invalid_msg_pool = (
             invalid_msg_pool  # hash: timestamp of last access
         )
@@ -494,7 +493,6 @@ class Tangle(Signed):
 
                 if p in self.all_tips:
                     # Getting the total amount of children of the parent tip
-                    # TODO: cache the child count
                     total_children = len(self.find_children(p))
 
                     if total_children > 1:
@@ -582,13 +580,6 @@ class Tangle(Signed):
 
         return False
 
-    def _is_message_finalized(self, msg: Message, total: int = None):
-        if total is None:
-            total = 0
-
-        for p in msg.parents:
-            total
-
     def remove_branch(self, branch_id: tuple[str, int]):
         if branch_id in self.branches:
             del self.branches[branch_id]
@@ -611,6 +602,15 @@ class Tangle(Signed):
         # Finding the deepest parent branch manager
         deep_ref = max(parent_branches, key=lambda b: len(b.manager.nesting))
 
+        # Checking if the history of the parent branches line up with the deepest branch
+        # (prevents conflicting branches)
+        if any(
+            deep_ref.manager.nesting[i] != n
+            for p in parent_branches
+            for i, n in enumerate(p.manager.nesting)
+        ):
+            return False
+
         duplicate = deep_ref.branch.find_existing_duplicate(msg)
 
         if duplicate:
@@ -624,7 +624,6 @@ class Tangle(Signed):
             if duplicate is None:
                 return False
 
-            # TODO: group the messages that are part of each branch
             children = deep_ref.branch.find_children(duplicate)
 
             # Removing the branches from the branch
