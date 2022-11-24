@@ -48,8 +48,6 @@ class Node(Threaded):
         self.max_connections = max_connections
         self.full_node = full_node
 
-        self.request_callback_pool = {}  # hash: callback
-
         # Initializing the TCP/IP server
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.init_server()
@@ -174,20 +172,14 @@ class Node(Threaded):
     def request_msgs(
         self, msgs: list[str], initial: Message = None, history=False
     ):
+        self.scheduler.add_pending(initial, msgs)
+
         request = self.create_request(
             GetMsgs,
             initial=initial.to_dict(),
             msgs=msgs,
             history=history,
         )
-
-        if initial is not None:
-
-            def callback():
-                if self.serialize_msg(initial.to_dict()):
-                    self.add_new_msg(initial)
-
-            self.request_callback_pool[request.hash] = callback
 
         self.send_to_nodes(request.to_dict())
 
@@ -213,25 +205,25 @@ class Node(Threaded):
 
         request.receive(self, node)
 
-        # Executing the request callback if there is one
-        callback = self.request_callback_pool.get(request.hash, None)
-
-        if callback is not None:
-            del self.request_callback_pool[request.hash]
-            callback()
-
         return True
 
     def handle_new_message(self, data: dict, node: NodeConnection = None):
         if (msg := self.serialize_msg(data)) is False:
             return False
 
-        if node is not None:
-            # Propagating message to other nodes
-            self.send_to_nodes(data, exclude=[node.id])
+        if msg.hash in self.tangle.all_msgs:
+            return True
 
         # Queueing the message
         self.scheduler.queue_msg(msg)
+
+        if node is None:
+            return True
+
+        # Propagating message to other nodes
+        self.send_to_nodes(data, exclude=[node.id])
+
+        return True
 
     def serialize_msg(self, data: dict):
         msg = message_lookup(data)
@@ -243,9 +235,6 @@ class Node(Threaded):
         is_sem_valid = msg.is_sem_valid()
 
         if is_sem_valid is False:
-            return False
-
-        if msg.hash in self.tangle.msgs:
             return False
 
         return msg
@@ -303,8 +292,6 @@ class Node(Threaded):
 
         # Checking if any conflicts with the parents were already resolved
         if self.tangle.is_message_finalized(msg) is False:
-            # TODO: make sure all the parent branches do not conflict
-
             found_duplicate = self.tangle.find_duplicates_from_branches(
                 msg, occurs
             )
@@ -331,6 +318,10 @@ class Node(Threaded):
                     )
 
                 return
+
+        # Checking if the message is already in the tangle
+        if msg.hash in self.tangle.all_msgs:
+            return
 
         # Checking if the payload is valid
         if msg.is_payload_valid(self.tangle) is False:

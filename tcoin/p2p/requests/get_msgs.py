@@ -56,21 +56,41 @@ class GetMsgs(Request):
 
         return children
 
-    def receive(self, client: "Node", _):
+    def receive(self, client: "Node", node: "NodeConnection"):
         msgs = self.response
 
+        # Checking if there were messages returned in the response
         if msgs is None:
             return
 
+        initial = self.payload["initial"]
+        requested_msgs = self.payload["msgs"]
+
+        # Serializing the initial message
+        if (initial := client.serialize_msg(initial)) is False:
+            return
+
+        pending = client.scheduler.p_pending.get(initial.hash, None)
+
+        # Checking if the initial message is still pending
+        if pending is None:
+            return
+
         for _id, m in msgs.items():
+            # Checking if the message is still pending
+            if _id not in pending.missing:
+                continue
+
             # Checking if the message was requested
-            if _id not in self.payload.get("msgs", []):
+            if _id not in requested_msgs:
                 continue
 
-            if m is None:
-                continue
+            if m is not None:
+                # Checking if the returned message is serializable
+                if (m := client.serialize_msg(m)) is False:
+                    continue
 
-            if (msg := client.serialize_msg(m)) is False:
-                continue
+            # Casting for the message
+            pending.add_vote(node.id, _id, m)
 
-            client.add_new_msg(msg)
+        client.scheduler.update_pending(pending)

@@ -208,6 +208,9 @@ class Branch:
             self.add_msg(d)
 
     def add_msg(self, msg: Message, invalid_parents: list[str] = []):
+        if msg.hash in self.msgs:
+            return
+
         # TODO: add support for weak parents
         self.msgs[msg.hash] = msg
 
@@ -451,6 +454,9 @@ class Tangle(Signed):
         return {_id: int(_id in self.weak_tips) for _id in tip_ids}
 
     def add_approved_msg(self, msg: Message):
+        if msg.hash in self.all_msgs:
+            return
+
         self.msgs[msg.hash] = msg
         msg.update_state(self.state)
 
@@ -815,9 +821,7 @@ class Tangle(Signed):
         if (
             secure_storage
             and Wallet.is_signature_valid(
-                address=wallet.address,
-                signature=tangle.signature,
-                msg=tangle.hash,
+                wallet.address, signature=tangle.signature, msg=tangle.hash
             )
             is False
         ):
