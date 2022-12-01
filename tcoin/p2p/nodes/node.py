@@ -5,7 +5,7 @@ import string
 import time
 
 from tcoin.config import request_children_after
-from tcoin.tangle import Tangle
+from tcoin.tangle import BranchReference, Tangle
 from tcoin.tangle.messages import Message, message_lookup
 from tcoin.utils import load_storage_file, save_storage_file
 from tcoin.wallet import Wallet
@@ -298,6 +298,14 @@ class Node(Threaded):
 
                     return
 
+        self.handle_known_msg(msg, invalid_parents, occurs)
+
+    def handle_known_msg(
+        self,
+        msg: Message,
+        invalid_parents: list[str],
+        occurs: list[BranchReference],
+    ):
         # Checking if any conflicts with the parents were already resolved
         if self.tangle.is_message_finalized(msg) is False:
             found_duplicate = self.tangle.find_duplicates_from_branches(
