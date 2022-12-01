@@ -8,4 +8,4 @@ max_tips_requested = 100
 
 # Invalid message pool
 invalid_msg_pool_size = 500
-invalid_msg_pool_purge_time = 60 * 15
+invalid_msg_pool_purge_time = 60 * 10

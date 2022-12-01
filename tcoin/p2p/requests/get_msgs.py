@@ -32,27 +32,28 @@ class GetMsgs(Request):
         if len(tips) > max_tips_requested:
             tips = random.sample(tips, max_tips_requested)
 
-        if history:
-            children = {}
+        children = {}
 
-            for t in tips:
-                children = client.tangle.get_direct_children(t)
+        for t in tips:
+            if t in client.tangle.state.in_invalid_pool(t):
+                children[t] = False
+                continue
 
-                if children is None:
+            if not history:
+                msg = client.tangle.get_msg(t)
+                children[t] = None if msg is None else msg.to_dict()
+                continue
+
+            c = client.tangle.get_direct_children(t)
+
+            if c is None:
+                continue
+
+            for _id, msg in c.values():
+                if _id in children:
                     continue
 
-                for _id, msg in children.values():
-                    if _id in children:
-                        continue
-                    children[_id] = msg.to_dict()
-
-        else:
-            children = {}
-
-            for t in tips:
-                msg = client.tangle.get_msg(t)
-
-                children[t] = None if msg is None else msg.to_dict()
+                children[_id] = msg.to_dict()
 
         return children
 

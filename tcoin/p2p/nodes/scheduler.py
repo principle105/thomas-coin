@@ -51,7 +51,8 @@ class PendingMessage:
                 continue
 
             score = sum(
-                node.get_rep(n_id) * (1 if v else -1) for n_id, v in v.items()
+                node.get_rep(n_id) * (1 if v else -1 if v is False else 0)
+                for n_id, v in v.items()
             )
 
             if decide_now:
@@ -85,7 +86,7 @@ class PendingMessage:
                 continue
 
             # Adding main state's invalid message pool
-            node.tangle.state.add_invalid_msg(v)
+            node.tangle.state.add_invalid_msg(_id)
 
         if not self.missing:
             node.handle_new_message(self.msg.to_dict())
