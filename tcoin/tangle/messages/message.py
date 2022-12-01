@@ -214,7 +214,7 @@ class Message(SignedPayload):
             return False
 
         # Checking if there are enough strong parents
-        if list(self.parents.values()).count(0) < MIN_STRONG_PARENTS:
+        if list(self.parents.values()).count(True) < MIN_STRONG_PARENTS:
             return False
 
         if len(self.parents) > MAX_PARENTS:
@@ -265,7 +265,7 @@ class Message(SignedPayload):
             p_msg = tangle.get_msg(p)
 
             # Ignoring validation if the parent is weak
-            if t == 1:
+            if t is False:
                 # Checking if the parent is falsely weak
                 if p_msg is not None:
                     invalid_parents.add(p)

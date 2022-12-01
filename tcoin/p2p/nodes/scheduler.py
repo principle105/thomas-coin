@@ -129,6 +129,10 @@ class Scheduler(Threaded):
     ):
         pending.add_vote(node_id, msg_id, msg)
 
+        if msg is not None:
+            self.add_pending(msg, list(msg.parents))
+            self.update_pending()
+
         self.update_missing(pending)
 
     def update_pending(self, pending: PendingMessage, update=True):

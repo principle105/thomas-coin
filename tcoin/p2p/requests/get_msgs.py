@@ -63,8 +63,11 @@ class GetMsgs(Request):
         if msgs is None:
             return
 
-        initial = self.payload["initial"]
-        requested_msgs = self.payload["msgs"]
+        initial = self.payload.get("initial", None)
+        requested_msgs = self.payload.get("msgs", None)
+
+        if initial is None or requested_msgs is None:
+            return
 
         # Serializing the initial message
         if (initial := client.serialize_msg(initial)) is False:

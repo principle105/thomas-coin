@@ -298,7 +298,7 @@ class BranchManager:
 
         # Checking if the parents of each message are known
         for msg in branch.msgs.values():
-            valid_parents = {_id for _id, t in msg.parents.items() if t == 0}
+            valid_parents = {_id for _id, t in msg.parents.items() if t}
 
             if valid_parents - all_branch_msgs:
                 return
@@ -444,14 +444,14 @@ class Tangle(Signed):
         self.weak_tips = self.purge_tips(self.weak_tips)
 
         if self.all_tips == {}:
-            return {genesis_msg.hash: 0}
+            return {genesis_msg.hash: True}
 
         amt = min(len(self.all_tips), MAX_PARENTS)
 
         tip_ids = random.sample(self.all_tips.keys(), amt)
 
         # Mapping the tips to their tip type
-        return {_id: int(_id in self.weak_tips) for _id in tip_ids}
+        return {_id: _id not in self.weak_tips for _id in tip_ids}
 
     def add_approved_msg(self, msg: Message, strong: bool = True):
         if msg.hash in self.msgs:
@@ -498,7 +498,7 @@ class Tangle(Signed):
 
         # Only validating tips if the message does not contain invalid parents
         if not invalid_parents:
-            for p, t in msg.parents.items():
+            for p in msg.parents:
                 if p == genesis_msg.hash:
                     continue
 
