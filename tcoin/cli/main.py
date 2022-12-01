@@ -168,41 +168,6 @@ def connect(_, node: Node):
     node.connect_to_node(host, port)
 
 
-def view_branch(tangle: Tangle, _):
-    node_id = inquirer.text(
-        message="Node ID:",
-        validate=EmptyInputValidator(),
-    ).execute()
-
-    index = inquirer.number(
-        message="Index:", validate=EmptyInputValidator()
-    ).execute()
-
-    index = int(index)
-
-    branch_id = (node_id, index)
-
-    branch = tangle.branches.get(branch_id, None)
-
-    if branch is None:
-        return Send.fail("Branch not found")
-
-    Send.primary(f"\n\nBranch ID: {branch_id}")
-
-    for i, b in enumerate(branch.conflicts.values()):
-        Send.secondary(f"Branch: {i} - {len(b.msgs)}")
-
-        state = tangle.state.merge(b.state).merge(
-            branch.main_branch.state, add=False
-        )
-
-        balance = state.get_balance(branch_id[0])
-
-        Send.regular(f"Branch Balance: {balance}")
-
-    Send.regular("\n\n")
-
-
 def view_balance(tangle: Tangle, node: Node):
     address = inquirer.text(message="Address:").execute()
 
@@ -289,7 +254,6 @@ def start():
             "Tangle Stats": tangle_stats,
             "View Message": view_msg,
             "Balance": view_balance,
-            "View Branch": view_branch,
         },
         "Send": send,
         "View Address": view_address,

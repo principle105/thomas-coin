@@ -453,12 +453,19 @@ class Tangle(Signed):
         # Mapping the tips to their tip type
         return {_id: int(_id in self.weak_tips) for _id in tip_ids}
 
-    def add_approved_msg(self, msg: Message):
-        if msg.hash in self.all_msgs:
+    def add_approved_msg(self, msg: Message, strong: bool = True):
+        if msg.hash in self.msgs:
             return
 
         self.msgs[msg.hash] = msg
-        msg.update_state(self.state)
+
+        if msg.hash in self.all_tips:
+            if strong:
+                del self.strong_tips[msg.hash]
+            else:
+                del self.weak_tips[msg.hash]
+        else:
+            msg.update_state(self.state)
 
     def find_children(
         self,
@@ -497,26 +504,21 @@ class Tangle(Signed):
 
                 p_msg: Message = self.get_msg(p)
 
-                if p in self.all_tips:
-                    # Getting the total amount of children of the parent tip
-                    total_children = len(self.find_children(p))
+                # Getting the total amount of children of the parent tip
+                total_children = len(self.find_children(p))
 
-                    if total_children > 1:
-                        if t == 0:
-                            del self.strong_tips[p]
-                        else:
-                            del self.weak_tips[p]
+                if total_children > 1:
+                    self.add_approved_msg(p_msg)
 
-                        self.add_approved_msg(p_msg)
+        if msg.hash not in self.all_msgs:
+            if not invalid_parents:
+                self.strong_tips[msg.hash] = msg
+            else:
+                # If there are invalid parents, the tip is added to the weak pool
+                self.weak_tips[msg.hash] = msg
 
-            self.strong_tips[msg.hash] = msg
-
-        else:
-            # If there are invalid parents, the tip is added to the weak pool
-            self.weak_tips[msg.hash] = msg
-
-        # Updating the state
-        self.state.update_tx_on_tangle(msg)
+            # Updating the state
+            msg.update_state(self.state)
 
     def get_msg(self, hash_str: str):
         msg = self.msgs.get(hash_str, None)

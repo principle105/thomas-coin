@@ -23,6 +23,10 @@ FINALITY_SCORE = 4  # approval weight of a branch for it to be considered final
 # Scheduler
 # TODO: make this dynamic
 SCHEDULING_RATE = 0.05  # how often the scheduler should run in seconds
+PENDING_THRESHOLD = (
+    3  # reputation threshold for a pending message to be considered valid
+)
+PENDING_WINDOW = 6  # seconds
 
 # Request
 MAX_REQUEST_SIZE = 16384  # maximum size of a request in bytes

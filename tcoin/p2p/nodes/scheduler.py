@@ -6,7 +6,7 @@ if TYPE_CHECKING:
 
 from typing import Literal
 
-from tcoin.constants import SCHEDULING_RATE
+from tcoin.constants import PENDING_THRESHOLD, PENDING_WINDOW, SCHEDULING_RATE
 from tcoin.tangle.messages import Message
 
 from .threaded import Threaded
@@ -16,41 +16,70 @@ class PendingMessage:
     def __init__(
         self,
         msg: Message,
-        missing: dict[str, dict[str, Literal[True] | Message | None]],
+        missing: dict[str, dict[str, Literal[False] | Message | None]],
     ):
         self.msg = msg
         self.missing = missing  # {msg_id: {node_id: vote / msg}}
 
+        self.creation = time.time()
+
     def add_vote(self, node_id: str, msg_id: str, msg: Message | None):
         self.missing[msg_id][node_id] = False if msg is None else msg
 
-    def update_missing(self, node: "Node"):
-        not_verified = len(self.missing)
+    def update_missing(self, node: "Node", scheduler: "Scheduler"):
+        decide_now = time.time() > self.creation + PENDING_WINDOW
 
-        for _id, v in self.missing.items():
-            # TODO: check if at least every single parent has a vote
-            # TODO: Look at votes on an individual basis for each parent
-
+        for _id, v in list(self.missing.items()):
             if not v:
                 continue
 
-            if _id in node.tangle.all_msgs:
-                not_verified -= 1
+            if _id in scheduler.p_pending:
+                # Trying to update the missing parent
+                remove = scheduler.update_missing(scheduler.p_pending[_id])
+
+                if remove:
+                    del self.missing[_id]
+
                 continue
 
-            # TODO: properly implement both of these
-            is_valid = sum(1 for v in v.values() if v)
-            final_msg = list(v.values())[0]
+            if _id in node.tangle.all_msgs:
+                del self.missing[_id]
+                continue
+
+            # Making sure it has at least one vote
+            if not any(v.values()):
+                continue
+
+            score = sum(
+                node.get_rep(n_id) * (1 if v else -1) for n_id, v in v.items()
+            )
+
+            if decide_now:
+                is_valid = bool(score)
+            else:
+                is_valid = score >= PENDING_THRESHOLD
+
+            # Getting the message with the highest score
+            msgs: dict[str, Message] = {}
+            scores: dict[str, int] = {}
+
+            for n_id, m in v.items():
+                if not m:
+                    continue
+
+                scores[m.hash] = scores.get(m.hash, 0) + node.get_rep(n_id)
+                msgs[m.hash] = m
+
+            final_msg = msgs[max(scores, key=scores.get)]
 
             if is_valid:
                 # Adding parent to the tangle
-                node.add_new_msg(final_msg)
-
-                not_verified -= 1
+                scheduler.queue_msg(final_msg)
+                del self.missing[_id]
 
                 continue
 
-            invalid_decided = False  # TODO: actually calculate this
+            invalid_decided = decide_now or score <= -PENDING_THRESHOLD
 
             if not invalid_decided:
                 continue
@@ -58,10 +87,12 @@ class PendingMessage:
             # Adding main state's invalid message pool
             node.tangle.state.add_invalid_msg(v)
 
-            not_verified += 1
-
-        if not_verified == 0:
+        if not self.missing:
             node.handle_new_message(self.msg.to_dict())
+            return True
+
+        scheduler.update_pending(self, update=False)
+        return False
 
 
 class Scheduler(Threaded):
@@ -82,10 +113,12 @@ class Scheduler(Threaded):
         self.scores = {}  # {node_id: score}
 
     def update_missing(self, pending: PendingMessage):
-        remove = pending.update_missing(self.node)
+        remove = pending.update_missing(self.node, self)
 
         if remove:
             del self.p_pending[pending.msg.hash]
+
+        return remove
 
     def add_vote(
         self,
@@ -98,10 +131,11 @@ class Scheduler(Threaded):
 
         self.update_missing(pending)
 
-    def update_pending(self, pending: PendingMessage):
+    def update_pending(self, pending: PendingMessage, update=True):
         self.p_pending[pending.msg.hash] = pending
 
-        self.update_missing(pending)
+        if update:
+            self.update_missing(pending)
 
     def queue_msg(self, msg: Message):
         node_queue = self.queue.get(msg.node_id, {})

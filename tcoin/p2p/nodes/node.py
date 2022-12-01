@@ -214,6 +214,10 @@ class Node(Threaded):
         if msg.hash in self.tangle.all_msgs:
             return True
 
+        # Checking if the message has already been queued
+        if msg.hash in self.scheduler.queue.get(msg.node_id, {}):
+            return True
+
         # Queueing the message
         self.scheduler.queue_msg(msg)
 
@@ -238,6 +242,10 @@ class Node(Threaded):
             return False
 
         return msg
+
+    def get_rep(self, node_id: str):
+        # TODO: implement a reputation system
+        return 1
 
     def add_new_msg(self, msg: Message):
         if msg.hash in self.tangle.all_msgs:
