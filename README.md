@@ -8,7 +8,7 @@
 
 ## Development
 
-**Python 3.10 is required**
+**Python 3.10+ is required**
 
 1. Install [Poetry](https://python-poetry.org/) using `pip install poetry`
 
