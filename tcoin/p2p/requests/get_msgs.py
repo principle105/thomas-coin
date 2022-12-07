@@ -35,7 +35,7 @@ class GetMsgs(Request):
         children = {}
 
         for t in tips:
-            if t in client.tangle.state.in_invalid_pool(t):
+            if client.tangle.state.in_invalid_pool(t):
                 children[t] = False
                 continue
 

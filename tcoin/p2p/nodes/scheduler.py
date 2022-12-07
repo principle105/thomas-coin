@@ -4,9 +4,15 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .node import Node
 
+from threading import Thread
 from typing import Literal
 
-from tcoin.constants import PENDING_THRESHOLD, PENDING_WINDOW, SCHEDULING_RATE
+from tcoin.constants import (
+    DEFAULT_SCHEDULING_RATE,
+    PENDING_THRESHOLD,
+    PENDING_WINDOW,
+    UPDATE_RATE,
+)
 from tcoin.tangle.messages import Message
 
 from .threaded import Threaded
@@ -51,7 +57,8 @@ class PendingMessage:
                 continue
 
             score = sum(
-                node.get_rep(n_id) * (1 if v else -1 if v is False else 0)
+                node.tangle.get_rep(n_id)
+                * (1 if v else -1 if v is False else 0)
                 for n_id, v in v.items()
             )
 
@@ -68,7 +75,9 @@ class PendingMessage:
                 if not m:
                     continue
 
-                scores[m.hash] = scores.get(m.hash, 0) + node.get_rep(n_id)
+                scores[m.hash] = scores.get(m.hash, 0) + node.tangle.get_rep(
+                    n_id
+                )
                 msgs[m.hash] = m
 
             final_msg = msgs[max(scores, key=scores.get)]
@@ -112,6 +121,9 @@ class Scheduler(Threaded):
         ] = {}  # {msg_id: PendingMessage}
 
         self.scores = {}  # {node_id: score}
+
+        self.rate = DEFAULT_SCHEDULING_RATE
+        self.actual_rate = 0
 
     def update_missing(self, pending: PendingMessage):
         remove = pending.update_missing(self.node, self)
@@ -210,9 +222,28 @@ class Scheduler(Threaded):
 
         self.update_score(msg.node_id)
 
+        self.actual_rate += 1
+
     def run(self):
+        i = 0
+
         while not self.terminate_flag.is_set():
             if self.scores:
-                self.process_next_message()
+                t = Thread(target=self.process_next_message)
+                t.daemon = True
+                t.start()
 
-            time.sleep(SCHEDULING_RATE)
+                i += 1
+
+            time.sleep(self.rate)
+
+            if i >= UPDATE_RATE:
+                if self.actual_rate > i:
+                    self.rate += 1 / DEFAULT_SCHEDULING_RATE
+                else:
+                    self.rate = max(
+                        self.rate - (1 / DEFAULT_SCHEDULING_RATE), 0
+                    )
+
+                i = 0
+                self.actual_rate = 0

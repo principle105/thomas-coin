@@ -71,6 +71,10 @@ class TangleState:
 
         return in_pool
 
+    def get_rep(self, address: str):
+        # TODO: implement a proper reputation system
+        return self.wallets.get(address, 0)
+
     def get_balance(self, address: str):
         return self.wallets.get(address, 0)
 
@@ -398,6 +402,9 @@ class Tangle(Signed):
     @property
     def get_balance(self):
         return self.state.get_balance
+
+    def get_rep(self, address: str):
+        return self.state.get_rep(address)
 
     def remove_msg(self, msg: Message):
         removed = True
