@@ -53,7 +53,7 @@ class PendingMessage:
                 continue
 
             # Making sure it has at least one vote
-            if not any(v.values()):
+            if not any(m is not None for m in v.values()):
                 continue
 
             score = sum(

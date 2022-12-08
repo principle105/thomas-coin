@@ -23,7 +23,7 @@ FINALITY_SCORE = 4  # approval weight of a branch for it to be considered final
 # Scheduler
 DEFAULT_SCHEDULING_RATE = 0.05  # how often the scheduler should run in seconds
 UPDATE_RATE = (
-    2  # message interval that the scheduler should update the scheduling rate
+    15  # message interval that the scheduler should update the scheduling rate
 )
 PENDING_THRESHOLD = (
     3  # reputation threshold for a pending message to be considered valid
